@@ -1,4 +1,4 @@
-import { DEFAULT_PROJECTS, DesktopActionResult, Project } from '@shared/projects'
+import { DEFAULT_PROJECTS, DesktopActionResult, Project, ProjectRunEvent, ProjectRunState } from '@shared/projects'
 
 const STORAGE_KEY = 'dev-launch-pad-preview-projects'
 
@@ -21,6 +21,16 @@ const browserFallbackApi = {
   saveProjects: async (projects: Project[]): Promise<DesktopActionResult> => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
     return { ok: true, message: 'Projects saved in browser preview.' }
+  },
+  getProjectRunState: async (): Promise<ProjectRunState> => ({
+    statuses: {},
+    logs: {}
+  }),
+  runProject: async (): Promise<DesktopActionResult> => previewOnly('Run requires the Electron desktop app.'),
+  stopProject: async (): Promise<DesktopActionResult> => previewOnly('Stop requires the Electron desktop app.'),
+  onProjectRunEvent: (callback: (event: ProjectRunEvent) => void): (() => void) => {
+    void callback
+    return () => undefined
   },
   openFolder: async (): Promise<DesktopActionResult> => previewOnly('Open folder requires the Electron desktop app.'),
   openUrl: async (targetUrl: string): Promise<DesktopActionResult> => {

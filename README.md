@@ -2,6 +2,8 @@
 
 Windows desktop app for safely managing and opening local coding projects.
 
+Current release: v1.1
+
 ## Run locally
 
 ```powershell

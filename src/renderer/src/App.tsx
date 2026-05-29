@@ -6,14 +6,24 @@ import {
   ExternalLink,
   FolderOpen,
   MonitorPlay,
+  Play,
   Plus,
   Search,
+  Square,
   Terminal,
   Trash2,
   X
 } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { DEFAULT_PROJECTS, PROJECT_TYPES, Project, ProjectType } from '@shared/projects'
+import { APP_RELEASE_LABEL } from '@shared/app'
+import {
+  DEFAULT_PROJECTS,
+  PROJECT_TYPES,
+  Project,
+  ProjectLogEntry,
+  ProjectRunStatus,
+  ProjectType
+} from '@shared/projects'
 import { desktopApi } from './desktopApi'
 
 type FilterType = 'All' | ProjectType
@@ -31,11 +41,18 @@ const emptyProjectForm: ProjectFormState = {
 }
 
 const filters: FilterType[] = ['All', ...PROJECT_TYPES]
+const runStatuses: ProjectRunStatus[] = ['Running', 'Stopped', 'Error']
 
 const typeTone: Record<ProjectType, string> = {
   'Web app': 'tone-cyan',
   Game: 'tone-violet',
   Tool: 'tone-emerald'
+}
+
+const statusTone: Record<ProjectRunStatus, string> = {
+  Stopped: 'status-stopped',
+  Running: 'status-running',
+  Error: 'status-error'
 }
 
 const makeProjectId = (name: string): string => {
@@ -52,6 +69,12 @@ const quotePowerShellPath = (path: string): string => `"${path.replace(/"/g, '`"
 const cdCommandFor = (project: Project): string => `Set-Location -LiteralPath ${quotePowerShellPath(project.path)}`
 const codexCommandFor = (project: Project): string => `${cdCommandFor(project)}; codex`
 const gitStatusCommandFor = (project: Project): string => `${cdCommandFor(project)}; git status`
+const formatLogTime = (createdAt: string): string => {
+  const date = new Date(createdAt)
+  return Number.isNaN(date.getTime())
+    ? '--:--:--'
+    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
 
 export function App(): JSX.Element {
   const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS)
@@ -60,15 +83,66 @@ export function App(): JSX.Element {
   const [formOpen, setFormOpen] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const [form, setForm] = useState<ProjectFormState>(emptyProjectForm)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(DEFAULT_PROJECTS[0]?.id ?? null)
+  const [statuses, setStatuses] = useState<Record<string, ProjectRunStatus>>({})
+  const [logsByProject, setLogsByProject] = useState<Record<string, ProjectLogEntry[]>>({})
   const [notice, setNotice] = useState<string>('Ready')
   const [lastSuccess, setLastSuccess] = useState(false)
 
   useEffect(() => {
+    let active = true
+
     desktopApi
       .getProjects()
-      .then(setProjects)
+      .then((loadedProjects) => {
+        if (!active) return
+        setProjects(loadedProjects)
+        setSelectedProjectId((current) => current ?? loadedProjects[0]?.id ?? null)
+      })
       .catch(() => setNotice('Could not load local projects.'))
+
+    desktopApi
+      .getProjectRunState()
+      .then((state) => {
+        if (!active) return
+        setStatuses(state.statuses)
+        setLogsByProject(state.logs)
+      })
+      .catch(() => setNotice('Could not load project run state.'))
+
+    const unsubscribe = desktopApi.onProjectRunEvent((event) => {
+      if (event.status) {
+        setStatuses((current) => ({
+          ...current,
+          [event.projectId]: event.status ?? current[event.projectId] ?? 'Stopped'
+        }))
+      }
+
+      if (event.log) {
+        const log = event.log
+        setLogsByProject((current) => ({
+          ...current,
+          [event.projectId]: [...(current[event.projectId] ?? []), log].slice(-400)
+        }))
+      }
+    })
+
+    return () => {
+      active = false
+      unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      setSelectedProjectId(null)
+      return
+    }
+
+    if (!selectedProjectId || !projects.some((project) => project.id === selectedProjectId)) {
+      setSelectedProjectId(projects[0].id)
+    }
+  }, [projects, selectedProjectId])
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -89,6 +163,27 @@ export function App(): JSX.Element {
       { 'Web app': 0, Game: 0, Tool: 0 }
     )
   }, [projects])
+
+  const statusCounts = useMemo(() => {
+    return projects.reduce<Record<ProjectRunStatus, number>>(
+      (counts, project) => {
+        const status = statuses[project.id] ?? 'Stopped'
+        return {
+          ...counts,
+          [status]: counts[status] + 1
+        }
+      },
+      { Stopped: 0, Running: 0, Error: 0 }
+    )
+  }, [projects, statuses])
+
+  const selectedProject = useMemo(() => {
+    return projects.find((project) => project.id === selectedProjectId) ?? null
+  }, [projects, selectedProjectId])
+
+  const selectedProjectStatus = selectedProject ? statuses[selectedProject.id] ?? 'Stopped' : 'Stopped'
+  const selectedLogs = selectedProjectId ? logsByProject[selectedProjectId] ?? [] : []
+  const projectStatusFor = (projectId: string): ProjectRunStatus => statuses[projectId] ?? 'Stopped'
 
   const persistProjects = async (nextProjects: Project[], successMessage: string): Promise<void> => {
     const result = await desktopApi.saveProjects(nextProjects)
@@ -114,6 +209,23 @@ export function App(): JSX.Element {
       const result = await desktopApi.copyText(command)
       return result.ok ? { ok: true, message: `${label} copied.` } : result
     })
+  }
+
+  const runProject = (project: Project): void => {
+    setSelectedProjectId(project.id)
+
+    const confirmed = window.confirm(
+      `Run saved command?\n\nProject: ${project.name}\nFolder: ${project.path}\nCommand: ${project.runCommand}`
+    )
+
+    if (!confirmed) return
+
+    void runDesktopAction(() => desktopApi.runProject(project.id))
+  }
+
+  const stopProject = (project: Project): void => {
+    setSelectedProjectId(project.id)
+    void runDesktopAction(() => desktopApi.stopProject(project.id))
   }
 
   const openCreateForm = (): void => {
@@ -182,7 +294,7 @@ export function App(): JSX.Element {
     <div className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Windows Desktop Command Center</p>
+          <p className="eyebrow">Windows Desktop Command Center / {APP_RELEASE_LABEL}</p>
           <h1>Dev Launch Pad</h1>
         </div>
         <button className="primary-action" type="button" onClick={openCreateForm}>
@@ -228,10 +340,16 @@ export function App(): JSX.Element {
               <strong>{typeCounts[type]}</strong>
             </div>
           ))}
+          {runStatuses.map((status) => (
+            <div className="metric" key={status}>
+              <span>{status}</span>
+              <strong>{statusCounts[status]}</strong>
+            </div>
+          ))}
         </section>
 
         <section className="safety-note">
-          v1ではコマンドを自動実行しません。PowerShellを開いて、コピーしたコマンドを自分で貼って実行してください。
+          {APP_RELEASE_LABEL} runs only saved project commands after confirmation and blocks dangerous command tokens.
         </section>
 
         <section className="notice-bar" data-success={lastSuccess}>
@@ -240,95 +358,142 @@ export function App(): JSX.Element {
         </section>
 
         <section className="project-grid" aria-label="Projects">
-          {filteredProjects.map((project) => (
-            <article className="project-card" key={project.id}>
-              <div className="card-header">
-                <div>
-                  <span className={`type-pill ${typeTone[project.type]}`}>{project.type}</span>
-                  <h2>{project.name}</h2>
-                </div>
-                <div className="card-actions">
-                  <button title="Edit project" type="button" onClick={() => openEditForm(project)}>
-                    <Edit3 size={16} />
-                  </button>
-                  <button title="Delete project" type="button" onClick={() => deleteProject(project)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+          {filteredProjects.map((project) => {
+            const runStatus = projectStatusFor(project.id)
 
-              <dl className="project-meta">
-                <div>
-                  <dt>Path</dt>
-                  <dd>{project.path}</dd>
+            return (
+              <article
+                className={`project-card ${selectedProjectId === project.id ? 'selected' : ''}`}
+                key={project.id}
+                onClick={() => setSelectedProjectId(project.id)}
+              >
+                <div className="card-header">
+                  <div>
+                    <div className="pill-row">
+                      <span className={`type-pill ${typeTone[project.type]}`}>{project.type}</span>
+                      <span className={`run-status ${statusTone[runStatus]}`}>{runStatus}</span>
+                    </div>
+                    <h2>{project.name}</h2>
+                  </div>
+                  <div className="card-actions">
+                    <button title="Edit project" type="button" onClick={() => openEditForm(project)}>
+                      <Edit3 size={16} />
+                    </button>
+                    <button title="Delete project" type="button" onClick={() => deleteProject(project)}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <dt>URL</dt>
-                  <dd>{project.url || 'Not set'}</dd>
-                </div>
-                <div>
-                  <dt>Run</dt>
-                  <dd>{project.runCommand}</dd>
-                </div>
-              </dl>
 
-              <div className="button-grid">
-                <button
-                  type="button"
-                  title="Open folder"
-                  onClick={() => void runDesktopAction(() => desktopApi.openFolder(project.path))}
-                >
-                  <FolderOpen size={16} />
-                  Open folder
-                </button>
-                <button
-                  type="button"
-                  title="Open PowerShell here"
-                  onClick={() => void runDesktopAction(() => desktopApi.openPowerShell(project.path))}
-                >
-                  <Terminal size={16} />
-                  PowerShell
-                </button>
-                <button
-                  type="button"
-                  title="Open URL"
-                  disabled={!project.url}
-                  onClick={() => void runDesktopAction(() => desktopApi.openUrl(project.url))}
-                >
-                  <ExternalLink size={16} />
-                  Open URL
-                </button>
-                <button type="button" title="Copy run command" onClick={() => copyCommand('Run command', project.runCommand)}>
-                  <Clipboard size={16} />
-                  Copy run
-                </button>
-                <button type="button" title="Copy cd command" onClick={() => copyCommand('cd command', cdCommandFor(project))}>
-                  <Clipboard size={16} />
-                  Copy cd
-                </button>
-                <button
-                  type="button"
-                  title="Copy codex command"
-                  onClick={() => copyCommand('Codex command', codexCommandFor(project))}
-                >
-                  <Code2 size={16} />
-                  Copy codex
-                </button>
-                <button
-                  className="wide"
-                  type="button"
-                  title="Copy git status command"
-                  onClick={() => copyCommand('git status command', gitStatusCommandFor(project))}
-                >
-                  <Clipboard size={16} />
-                  Copy git status
-                </button>
-              </div>
-            </article>
-          ))}
+                <dl className="project-meta">
+                  <div>
+                    <dt>Path</dt>
+                    <dd>{project.path}</dd>
+                  </div>
+                  <div>
+                    <dt>URL</dt>
+                    <dd>{project.url || 'Not set'}</dd>
+                  </div>
+                  <div>
+                    <dt>Run</dt>
+                    <dd>{project.runCommand}</dd>
+                  </div>
+                </dl>
+
+                <div className="button-grid">
+                  {runStatus === 'Running' ? (
+                    <button className="stop-action" type="button" title="Stop saved command" onClick={() => stopProject(project)}>
+                      <Square size={16} />
+                      Stop
+                    </button>
+                  ) : (
+                    <button className="run-action" type="button" title="Run saved command" onClick={() => runProject(project)}>
+                      <Play size={16} />
+                      Run
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    title="Open folder"
+                    onClick={() => void runDesktopAction(() => desktopApi.openFolder(project.path))}
+                  >
+                    <FolderOpen size={16} />
+                    Open folder
+                  </button>
+                  <button
+                    type="button"
+                    title="Open PowerShell here"
+                    onClick={() => void runDesktopAction(() => desktopApi.openPowerShell(project.path))}
+                  >
+                    <Terminal size={16} />
+                    PowerShell
+                  </button>
+                  <button
+                    type="button"
+                    title="Open URL"
+                    disabled={!project.url}
+                    onClick={() => void runDesktopAction(() => desktopApi.openUrl(project.url))}
+                  >
+                    <ExternalLink size={16} />
+                    Open URL
+                  </button>
+                  <button type="button" title="Copy run command" onClick={() => copyCommand('Run command', project.runCommand)}>
+                    <Clipboard size={16} />
+                    Copy run
+                  </button>
+                  <button type="button" title="Copy cd command" onClick={() => copyCommand('cd command', cdCommandFor(project))}>
+                    <Clipboard size={16} />
+                    Copy cd
+                  </button>
+                  <button
+                    type="button"
+                    title="Copy codex command"
+                    onClick={() => copyCommand('Codex command', codexCommandFor(project))}
+                  >
+                    <Code2 size={16} />
+                    Copy codex
+                  </button>
+                  <button
+                    className="wide"
+                    type="button"
+                    title="Copy git status command"
+                    onClick={() => copyCommand('git status command', gitStatusCommandFor(project))}
+                  >
+                    <Clipboard size={16} />
+                    Copy git status
+                  </button>
+                </div>
+              </article>
+            )
+          })}
         </section>
 
         {filteredProjects.length === 0 && <section className="empty-state">No projects match the current view.</section>}
+
+        <section className="logs-panel" aria-label="Selected project logs">
+          <div className="logs-heading">
+            <div>
+              <p className="eyebrow">Logs</p>
+              <h2>{selectedProject ? selectedProject.name : 'Select a project'}</h2>
+            </div>
+            {selectedProject && (
+              <span className={`run-status ${statusTone[selectedProjectStatus]}`}>{selectedProjectStatus}</span>
+            )}
+          </div>
+
+          <div className="logs-body">
+            {selectedLogs.length > 0 ? (
+              selectedLogs.map((log) => (
+                <div className={`log-line log-${log.level}`} key={log.id}>
+                  <time>{formatLogTime(log.createdAt)}</time>
+                  <span>{log.message}</span>
+                </div>
+              ))
+            ) : (
+              <p className="empty-log">No logs for the selected project.</p>
+            )}
+          </div>
+        </section>
       </main>
 
       {formOpen && (

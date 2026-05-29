@@ -16,6 +16,29 @@ export type DesktopActionResult = {
   message?: string
 }
 
+export type ProjectRunStatus = 'Stopped' | 'Running' | 'Error'
+
+export type ProjectLogLevel = 'info' | 'output' | 'error'
+
+export type ProjectLogEntry = {
+  id: string
+  projectId: string
+  level: ProjectLogLevel
+  message: string
+  createdAt: string
+}
+
+export type ProjectRunEvent = {
+  projectId: string
+  status?: ProjectRunStatus
+  log?: ProjectLogEntry
+}
+
+export type ProjectRunState = {
+  statuses: Record<string, ProjectRunStatus>
+  logs: Record<string, ProjectLogEntry[]>
+}
+
 export const DEFAULT_PROJECTS: Project[] = [
   {
     id: 'ai-homework-safe-checker',

@@ -1,12 +1,74 @@
 import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { spawn } from 'node:child_process'
-import { DEFAULT_PROJECTS, DesktopActionResult, isProjectType, Project } from '@shared/projects'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import {
+  DEFAULT_PROJECTS,
+  DesktopActionResult,
+  isProjectType,
+  Project,
+  ProjectLogEntry,
+  ProjectLogLevel,
+  ProjectRunEvent,
+  ProjectRunState,
+  ProjectRunStatus
+} from '@shared/projects'
 
 const PROJECTS_FILE = 'projects.json'
+const MAX_PROJECT_LOGS = 400
+
+type RunningProject = {
+  child: ChildProcessWithoutNullStreams
+  stopping: boolean
+  completed: boolean
+}
+
+const runningProjects = new Map<string, RunningProject>()
+const projectStatuses = new Map<string, ProjectRunStatus>()
+const projectLogs = new Map<string, ProjectLogEntry[]>()
+let logSequence = 0
 
 const projectStorePath = (): string => join(app.getPath('userData'), PROJECTS_FILE)
+
+const broadcastRunEvent = (event: ProjectRunEvent): void => {
+  BrowserWindow.getAllWindows().forEach((window) => {
+    window.webContents.send('projects:run-event', event)
+  })
+}
+
+const setProjectStatus = (projectId: string, status: ProjectRunStatus): void => {
+  projectStatuses.set(projectId, status)
+  broadcastRunEvent({ projectId, status })
+}
+
+const appendProjectLog = (projectId: string, level: ProjectLogLevel, rawMessage: string): void => {
+  const message = rawMessage.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd()
+  if (!message.trim()) return
+
+  const log: ProjectLogEntry = {
+    id: `${Date.now()}-${++logSequence}`,
+    projectId,
+    level,
+    message: message.length > 12000 ? `${message.slice(0, 12000)}\n[output truncated]` : message,
+    createdAt: new Date().toISOString()
+  }
+
+  const logs = [...(projectLogs.get(projectId) ?? []), log].slice(-MAX_PROJECT_LOGS)
+  projectLogs.set(projectId, logs)
+  broadcastRunEvent({ projectId, log })
+}
+
+const getProjectRunState = (): ProjectRunState => {
+  const statuses = readProjects().reduce<Record<string, ProjectRunStatus>>((accumulator, project) => {
+    accumulator[project.id] = projectStatuses.get(project.id) ?? 'Stopped'
+    return accumulator
+  }, {})
+
+  return {
+    statuses,
+    logs: Object.fromEntries(projectLogs)
+  }
+}
 
 const createWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -87,7 +149,25 @@ const ensureDirectory = (targetPath: string): DesktopActionResult => {
     return { ok: false, message: `Folder does not exist: ${targetPath}` }
   }
 
-  return { ok: true }
+  try {
+    return statSync(targetPath).isDirectory()
+      ? { ok: true }
+      : { ok: false, message: `Path is not a folder: ${targetPath}` }
+  } catch {
+    return { ok: false, message: `Folder cannot be read: ${targetPath}` }
+  }
+}
+
+const dangerousCommandReason = (command: string): string | null => {
+  const normalized = command.toLowerCase()
+
+  if (normalized.includes('delete')) return 'delete'
+  if (/\brm\b/.test(normalized)) return 'rm'
+  if (normalized.includes('rmdir')) return 'rmdir'
+  if (normalized.includes('format')) return 'format'
+  if (/\bdel\s+\/s\b/.test(normalized)) return 'del /s'
+
+  return null
 }
 
 const escapePowerShellSingleQuoted = (value: string): string => value.replace(/'/g, "''")
@@ -110,6 +190,116 @@ const openPowerShellAt = (targetPath: string): DesktopActionResult => {
 
   child.unref()
   return { ok: true, message: 'PowerShell opened.' }
+}
+
+const findSavedProject = (projectId: string): Project | null => {
+  return readProjects().find((project) => project.id === projectId) ?? null
+}
+
+const failProjectRun = (projectId: string, message: string): DesktopActionResult => {
+  setProjectStatus(projectId, 'Error')
+  appendProjectLog(projectId, 'error', message)
+  return { ok: false, message }
+}
+
+const startProjectRun = (projectId: string): DesktopActionResult => {
+  const project = findSavedProject(projectId)
+  if (!project) return failProjectRun(projectId, 'Saved project was not found.')
+
+  if (runningProjects.has(project.id)) {
+    return { ok: false, message: `${project.name} is already running.` }
+  }
+
+  const directoryCheck = ensureDirectory(project.path)
+  if (!directoryCheck.ok) return failProjectRun(project.id, directoryCheck.message ?? 'Project folder is not available.')
+
+  const blockedCommand = dangerousCommandReason(project.runCommand)
+  if (blockedCommand) {
+    return failProjectRun(project.id, `Blocked dangerous command token: ${blockedCommand}`)
+  }
+
+  appendProjectLog(project.id, 'info', `command started: ${project.runCommand}`)
+  setProjectStatus(project.id, 'Running')
+
+  try {
+    const child = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-Command', project.runCommand], {
+      cwd: project.path,
+      windowsHide: true
+    })
+
+    const running: RunningProject = {
+      child,
+      stopping: false,
+      completed: false
+    }
+
+    runningProjects.set(project.id, running)
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      appendProjectLog(project.id, 'output', chunk.toString('utf8'))
+    })
+
+    child.stderr.on('data', (chunk: Buffer) => {
+      appendProjectLog(project.id, 'error', chunk.toString('utf8'))
+    })
+
+    child.on('error', (error) => {
+      if (running.completed) return
+      running.completed = true
+      runningProjects.delete(project.id)
+      setProjectStatus(project.id, 'Error')
+      appendProjectLog(project.id, 'error', error.message)
+    })
+
+    child.on('close', (code, signal) => {
+      if (running.completed) return
+      running.completed = true
+      runningProjects.delete(project.id)
+
+      if (running.stopping || code === 0) {
+        setProjectStatus(project.id, 'Stopped')
+        appendProjectLog(project.id, 'info', 'stopped')
+        return
+      }
+
+      setProjectStatus(project.id, 'Error')
+      appendProjectLog(project.id, 'error', `process exited with code ${code ?? 'unknown'}${signal ? ` and signal ${signal}` : ''}`)
+    })
+
+    return { ok: true, message: `${project.name} started.` }
+  } catch (error) {
+    runningProjects.delete(project.id)
+    return failProjectRun(project.id, error instanceof Error ? error.message : 'Project failed to start.')
+  }
+}
+
+const killProcessTree = (pid: number): Promise<void> => {
+  return new Promise((resolve) => {
+    const killer = spawn('taskkill', ['/pid', String(pid), '/t', '/f'], {
+      windowsHide: true,
+      stdio: 'ignore'
+    })
+
+    killer.on('error', () => resolve())
+    killer.on('close', () => resolve())
+  })
+}
+
+const stopProjectRun = async (projectId: string): Promise<DesktopActionResult> => {
+  const running = runningProjects.get(projectId)
+  if (!running) return { ok: false, message: 'Project is not running.' }
+
+  running.stopping = true
+
+  if (running.child.pid) {
+    await killProcessTree(running.child.pid)
+  }
+
+  if (!running.child.killed) {
+    running.child.kill()
+  }
+
+  return { ok: true, message: 'Stop signal sent.' }
 }
 
 ipcMain.handle('projects:list', () => readProjects())
@@ -158,6 +348,16 @@ ipcMain.handle('desktop:open-powershell', (_event, targetPath: string): DesktopA
 ipcMain.handle('desktop:copy-text', (_event, text: string): DesktopActionResult => {
   clipboard.writeText(String(text ?? ''))
   return { ok: true, message: 'Copied to clipboard.' }
+})
+
+ipcMain.handle('projects:run-state', () => getProjectRunState())
+
+ipcMain.handle('projects:run', (_event, projectId: unknown): DesktopActionResult => {
+  return typeof projectId === 'string' ? startProjectRun(projectId) : { ok: false, message: 'Project id is required.' }
+})
+
+ipcMain.handle('projects:stop', (_event, projectId: unknown): Promise<DesktopActionResult> | DesktopActionResult => {
+  return typeof projectId === 'string' ? stopProjectRun(projectId) : { ok: false, message: 'Project id is required.' }
 })
 
 app.whenReady().then(() => {
