@@ -1,6 +1,7 @@
 node_modules
 out
 dist
+release
 *.local
 *.log
 .DS_Store

@@ -1,3 +1,3 @@
-export const APP_VERSION = '1.3.0'
+export const APP_VERSION = '1.5.0'
 
 export const APP_RELEASE_LABEL = `v${APP_VERSION.split('.').slice(0, 2).join('.')}`
