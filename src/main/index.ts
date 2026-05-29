@@ -16,17 +16,45 @@ import {
 
 const PROJECTS_FILE = 'projects.json'
 const MAX_PROJECT_LOGS = 400
+const QUICK_EXIT_MS = 8000
+
+type CommandSignal = {
+  label: string
+  pattern: RegExp
+}
 
 type RunningProject = {
   child: ChildProcessWithoutNullStreams
   stopping: boolean
   completed: boolean
+  fatalDetected: boolean
+  startedAt: number
+  successDetected: boolean
 }
 
 const runningProjects = new Map<string, RunningProject>()
 const projectStatuses = new Map<string, ProjectRunStatus>()
 const projectLogs = new Map<string, ProjectLogEntry[]>()
 let logSequence = 0
+
+const successSignals: CommandSignal[] = [
+  { label: 'Ready in', pattern: /ready in/i },
+  { label: 'Local:', pattern: /local:/i },
+  { label: 'localhost:', pattern: /localhost:/i },
+  { label: 'ready', pattern: /\bready\b/i },
+  { label: 'compiled', pattern: /\bcompiled\b/i },
+  { label: 'started server', pattern: /started server/i },
+  { label: 'vite', pattern: /\bvite\b/i }
+]
+
+const fatalSignals: CommandSignal[] = [
+  { label: 'Error:', pattern: /Error:/ },
+  { label: 'EADDRINUSE', pattern: /EADDRINUSE/i },
+  { label: 'Cannot find module', pattern: /Cannot find module/i },
+  { label: 'command not found', pattern: /command not found/i },
+  { label: 'failed', pattern: /\bfailed\b/i },
+  { label: 'permission denied', pattern: /permission denied/i }
+]
 
 const projectStorePath = (): string => join(app.getPath('userData'), PROJECTS_FILE)
 
@@ -170,6 +198,10 @@ const dangerousCommandReason = (command: string): string | null => {
   return null
 }
 
+const findSignal = (signals: CommandSignal[], output: string): string | null => {
+  return signals.find((signal) => signal.pattern.test(output))?.label ?? null
+}
+
 const escapePowerShellSingleQuoted = (value: string): string => value.replace(/'/g, "''")
 
 const openPowerShellAt = (targetPath: string): DesktopActionResult => {
@@ -198,8 +230,26 @@ const findSavedProject = (projectId: string): Project | null => {
 
 const failProjectRun = (projectId: string, message: string): DesktopActionResult => {
   setProjectStatus(projectId, 'Error')
-  appendProjectLog(projectId, 'error', message)
+  appendProjectLog(projectId, 'error', `fatal error detected: ${message}`)
   return { ok: false, message }
+}
+
+const inspectProjectOutput = (projectId: string, running: RunningProject, output: string): void => {
+  const fatalSignal = findSignal(fatalSignals, output)
+  if (fatalSignal && !running.fatalDetected) {
+    running.fatalDetected = true
+    setProjectStatus(projectId, 'Error')
+    appendProjectLog(projectId, 'error', `fatal error detected: ${fatalSignal}`)
+    return
+  }
+
+  const successSignal = findSignal(successSignals, output)
+  if (successSignal && !running.successDetected) {
+    running.successDetected = true
+    if (!running.fatalDetected) setProjectStatus(projectId, 'Running')
+    appendProjectLog(projectId, 'info', `success signal detected: ${successSignal}`)
+    appendProjectLog(projectId, 'info', 'process running')
+  }
 }
 
 const startProjectRun = (projectId: string): DesktopActionResult => {
@@ -229,26 +279,35 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
 
     const running: RunningProject = {
       child,
+      completed: false,
+      fatalDetected: false,
+      startedAt: Date.now(),
       stopping: false,
-      completed: false
+      successDetected: false
     }
 
     runningProjects.set(project.id, running)
+    appendProjectLog(project.id, 'info', 'process running')
 
     child.stdout.on('data', (chunk: Buffer) => {
-      appendProjectLog(project.id, 'output', chunk.toString('utf8'))
+      const output = chunk.toString('utf8')
+      appendProjectLog(project.id, 'output', output)
+      inspectProjectOutput(project.id, running, output)
     })
 
     child.stderr.on('data', (chunk: Buffer) => {
-      appendProjectLog(project.id, 'error', chunk.toString('utf8'))
+      const output = chunk.toString('utf8')
+      appendProjectLog(project.id, 'error', output)
+      inspectProjectOutput(project.id, running, output)
     })
 
     child.on('error', (error) => {
       if (running.completed) return
       running.completed = true
+      running.fatalDetected = true
       runningProjects.delete(project.id)
       setProjectStatus(project.id, 'Error')
-      appendProjectLog(project.id, 'error', error.message)
+      appendProjectLog(project.id, 'error', `fatal error detected: ${error.message}`)
     })
 
     child.on('close', (code, signal) => {
@@ -258,12 +317,26 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
 
       if (running.stopping || code === 0) {
         setProjectStatus(project.id, 'Stopped')
-        appendProjectLog(project.id, 'info', 'stopped')
+        appendProjectLog(project.id, 'info', 'process stopped')
         return
       }
 
-      setProjectStatus(project.id, 'Error')
-      appendProjectLog(project.id, 'error', `process exited with code ${code ?? 'unknown'}${signal ? ` and signal ${signal}` : ''}`)
+      if (running.fatalDetected) {
+        appendProjectLog(project.id, 'info', 'process stopped')
+        return
+      }
+
+      const elapsedMs = Date.now() - running.startedAt
+      const exitSummary = `process exited with code ${code ?? 'unknown'}${signal ? ` and signal ${signal}` : ''}`
+
+      if (code !== null && code !== 0 && elapsedMs < QUICK_EXIT_MS) {
+        setProjectStatus(project.id, 'Error')
+        appendProjectLog(project.id, 'error', `fatal error detected: ${exitSummary} after ${elapsedMs}ms`)
+        return
+      }
+
+      setProjectStatus(project.id, 'Stopped')
+      appendProjectLog(project.id, 'info', `process stopped: ${exitSummary}`)
     })
 
     return { ok: true, message: `${project.name} started.` }

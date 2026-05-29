@@ -2,7 +2,7 @@
 
 Windows desktop app for safely managing and opening local coding projects.
 
-Current release: v1.1
+Current release: v1.2
 
 ## Run locally
 
