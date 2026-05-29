@@ -18,9 +18,12 @@ import {
 } from '@shared/projects'
 
 const PROJECTS_FILE = 'projects.json'
+const APP_USER_MODEL_ID = 'com.suzuk.devlaunchpad'
 const MAX_PROJECT_LOGS = 400
 const QUICK_EXIT_MS = 8000
 const URL_REACHABILITY_TIMEOUT_MS = 1600
+const DEV_APP_ICON_PATH = join(process.cwd(), 'resources/dev-launch-pad.ico')
+const PACKAGED_APP_ICON_PATH = join(process.resourcesPath, 'dev-launch-pad.ico')
 
 type CommandSignal = {
   label: string
@@ -63,6 +66,12 @@ const fatalSignals: CommandSignal[] = [
 ]
 
 const projectStorePath = (): string => join(app.getPath('userData'), PROJECTS_FILE)
+
+const appIconPath = (): string => (app.isPackaged ? PACKAGED_APP_ICON_PATH : DEV_APP_ICON_PATH)
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_USER_MODEL_ID)
+}
 
 const broadcastRunEvent = (event: ProjectRunEvent): void => {
   BrowserWindow.getAllWindows().forEach((window) => {
@@ -111,6 +120,7 @@ const createWindow = (): void => {
     minWidth: 1080,
     minHeight: 720,
     title: 'Dev Launch Pad',
+    icon: appIconPath(),
     backgroundColor: '#08111f',
     show: false,
     autoHideMenuBar: true,

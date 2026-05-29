@@ -1,6 +1,6 @@
 {
   "name": "dev-launch-pad",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "A safe Windows desktop command center for local coding projects.",
   "main": "out/main/index.js",
   "author": "suzuk",
@@ -25,7 +25,14 @@
       "out/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "resources/dev-launch-pad.ico",
+        "to": "dev-launch-pad.ico"
+      }
+    ],
     "win": {
+      "icon": "resources/dev-launch-pad.ico",
       "target": [
         {
           "target": "portable",
