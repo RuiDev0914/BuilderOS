@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, Menu, shell, Tray } from 'electron'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -44,6 +44,9 @@ type RunningProject = {
 const runningProjects = new Map<string, RunningProject>()
 const projectStatuses = new Map<string, ProjectRunStatus>()
 const projectLogs = new Map<string, ProjectLogEntry[]>()
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let isQuitting = false
 let logSequence = 0
 
 const successSignals: CommandSignal[] = [
@@ -114,7 +117,14 @@ const getProjectRunState = (): ProjectRunState => {
 }
 
 const createWindow = (): void => {
-  const mainWindow = new BrowserWindow({
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    return
+  }
+
+  const browserWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 1080,
@@ -131,16 +141,65 @@ const createWindow = (): void => {
       sandbox: false
     }
   })
+  mainWindow = browserWindow
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+  browserWindow.on('ready-to-show', () => {
+    browserWindow.show()
+  })
+
+  browserWindow.on('close', (event) => {
+    if (isQuitting) return
+
+    event.preventDefault()
+    browserWindow.hide()
+  })
+
+  browserWindow.on('minimize', () => {
+    if (isQuitting) return
+
+    browserWindow.hide()
+  })
+
+  browserWindow.on('closed', () => {
+    if (mainWindow === browserWindow) mainWindow = null
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+    browserWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    browserWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+const showMainWindow = (): void => {
+  createWindow()
+
+  if (!mainWindow || mainWindow.isDestroyed()) return
+
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+const createTray = (): void => {
+  if (tray) return
+
+  tray = new Tray(appIconPath())
+  tray.setToolTip('Dev Launch Pad')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open Dev Launch Pad', click: showMainWindow },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true
+          app.quit()
+        }
+      }
+    ])
+  )
+  tray.on('click', showMainWindow)
 }
 
 const normalizeProject = (input: unknown): Project | null => {
@@ -552,12 +611,13 @@ ipcMain.handle('projects:stop', (_event, projectId: unknown): Promise<DesktopAct
 
 app.whenReady().then(() => {
   createWindow()
+  createTray()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    showMainWindow()
   })
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+app.on('before-quit', () => {
+  isQuitting = true
 })

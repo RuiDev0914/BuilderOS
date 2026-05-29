@@ -2,7 +2,7 @@
 
 Windows desktop app for safely managing and opening local coding projects.
 
-Current release: v1.6
+Current release: v1.7
 
 ## Development
 
@@ -22,3 +22,4 @@ The Windows portable app is written to `release/` as `Dev Launch Pad-<version>-p
 The app is unsigned, so Windows SmartScreen may show a warning the first time it is opened.
 
 Project data is stored as `projects.json` inside Electron's user data folder for this app.
+Dev Launch Pad may keep running in the system tray after closing the window. Use Quit from the tray menu to fully close it.
