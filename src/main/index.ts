@@ -6,6 +6,7 @@ import {
   DEFAULT_PROJECTS,
   DesktopActionResult,
   isProjectType,
+  migrateDefaultProjectPorts,
   Project,
   ProjectLogEntry,
   ProjectLogLevel,
@@ -156,7 +157,14 @@ const readProjects = (): Project[] => {
     if (!Array.isArray(parsed)) return DEFAULT_PROJECTS
 
     const projects = parsed.map(normalizeProject).filter((project): project is Project => Boolean(project))
-    return projects.length > 0 ? projects : DEFAULT_PROJECTS
+    const safeProjects = projects.length > 0 ? projects : DEFAULT_PROJECTS
+    const migration = migrateDefaultProjectPorts(safeProjects)
+
+    if (migration.changed) {
+      writeProjects(migration.projects)
+    }
+
+    return migration.projects
   } catch {
     return DEFAULT_PROJECTS
   }

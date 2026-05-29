@@ -1,11 +1,25 @@
-import { DEFAULT_PROJECTS, DesktopActionResult, Project, ProjectRunEvent, ProjectRunState } from '@shared/projects'
+import {
+  DEFAULT_PROJECTS,
+  DesktopActionResult,
+  migrateDefaultProjectPorts,
+  Project,
+  ProjectRunEvent,
+  ProjectRunState
+} from '@shared/projects'
 
 const STORAGE_KEY = 'dev-launch-pad-preview-projects'
 
 const readPreviewProjects = (): Project[] => {
   try {
     const rawProjects = localStorage.getItem(STORAGE_KEY)
-    return rawProjects ? (JSON.parse(rawProjects) as Project[]) : DEFAULT_PROJECTS
+    const projects = rawProjects ? (JSON.parse(rawProjects) as Project[]) : DEFAULT_PROJECTS
+    const migration = migrateDefaultProjectPorts(projects)
+
+    if (migration.changed) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migration.projects))
+    }
+
+    return migration.projects
   } catch {
     return DEFAULT_PROJECTS
   }
