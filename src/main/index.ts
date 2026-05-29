@@ -2,6 +2,8 @@ import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
 import {
   DEFAULT_PROJECTS,
   DesktopActionResult,
@@ -18,6 +20,7 @@ import {
 const PROJECTS_FILE = 'projects.json'
 const MAX_PROJECT_LOGS = 400
 const QUICK_EXIT_MS = 8000
+const URL_REACHABILITY_TIMEOUT_MS = 1600
 
 type CommandSignal = {
   label: string
@@ -27,8 +30,10 @@ type CommandSignal = {
 type RunningProject = {
   child: ChildProcessWithoutNullStreams
   stopping: boolean
+  alreadyReachable: boolean
   completed: boolean
   fatalDetected: boolean
+  fatalSignal?: string
   startedAt: number
   successDetected: boolean
 }
@@ -210,6 +215,47 @@ const findSignal = (signals: CommandSignal[], output: string): string | null => 
   return signals.find((signal) => signal.pattern.test(output))?.label ?? null
 }
 
+const isProjectUrlReachable = (targetUrl: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    let settled = false
+
+    const settle = (reachable: boolean): void => {
+      if (settled) return
+      settled = true
+      resolve(reachable)
+    }
+
+    try {
+      const url = new URL(targetUrl)
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        settle(false)
+        return
+      }
+
+      const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(
+        url,
+        {
+          method: 'GET',
+          timeout: URL_REACHABILITY_TIMEOUT_MS
+        },
+        (response) => {
+          response.resume()
+          settle(true)
+        }
+      )
+
+      request.on('timeout', () => {
+        request.destroy()
+        settle(false)
+      })
+      request.on('error', () => settle(false))
+      request.end()
+    } catch {
+      settle(false)
+    }
+  })
+}
+
 const escapePowerShellSingleQuoted = (value: string): string => value.replace(/'/g, "''")
 
 const openPowerShellAt = (targetPath: string): DesktopActionResult => {
@@ -242,30 +288,58 @@ const failProjectRun = (projectId: string, message: string): DesktopActionResult
   return { ok: false, message }
 }
 
-const inspectProjectOutput = (projectId: string, running: RunningProject, output: string): void => {
+const markProjectAlreadyReachable = (project: Project, running?: RunningProject): DesktopActionResult => {
+  if (running) running.alreadyReachable = true
+
+  setProjectStatus(project.id, 'Running')
+  appendProjectLog(project.id, 'info', 'Project is already reachable. Marked as running.')
+  broadcastRunEvent({
+    projectId: project.id,
+    message: 'This project already seems to be running.'
+  })
+
+  return { ok: true, message: 'This project already seems to be running.' }
+}
+
+const reconcileReachableProjectAfterFatal = async (project: Project, running: RunningProject): Promise<void> => {
+  if (!running.fatalDetected || running.alreadyReachable) return
+
+  const reachable = await isProjectUrlReachable(project.url)
+  if (!reachable) return
+
+  markProjectAlreadyReachable(project, running)
+}
+
+const inspectProjectOutput = (project: Project, running: RunningProject, output: string): void => {
   const fatalSignal = findSignal(fatalSignals, output)
   if (fatalSignal && !running.fatalDetected) {
     running.fatalDetected = true
-    setProjectStatus(projectId, 'Error')
-    appendProjectLog(projectId, 'error', `fatal error detected: ${fatalSignal}`)
+    running.fatalSignal = fatalSignal
+    appendProjectLog(project.id, 'error', `fatal error detected: ${fatalSignal}`)
+    void reconcileReachableProjectAfterFatal(project, running)
     return
   }
 
   const successSignal = findSignal(successSignals, output)
   if (successSignal && !running.successDetected) {
     running.successDetected = true
-    if (!running.fatalDetected) setProjectStatus(projectId, 'Running')
-    appendProjectLog(projectId, 'info', `success signal detected: ${successSignal}`)
-    appendProjectLog(projectId, 'info', 'process running')
+    if (!running.fatalDetected) setProjectStatus(project.id, 'Running')
+    appendProjectLog(project.id, 'info', `success signal detected: ${successSignal}`)
+    appendProjectLog(project.id, 'info', 'process running')
   }
 }
 
-const startProjectRun = (projectId: string): DesktopActionResult => {
+const startProjectRun = async (projectId: string): Promise<DesktopActionResult> => {
   const project = findSavedProject(projectId)
   if (!project) return failProjectRun(projectId, 'Saved project was not found.')
 
   if (runningProjects.has(project.id)) {
-    return { ok: false, message: `${project.name} is already running.` }
+    if (await isProjectUrlReachable(project.url)) {
+      return markProjectAlreadyReachable(project, runningProjects.get(project.id))
+    }
+
+    setProjectStatus(project.id, 'Running')
+    return { ok: true, message: 'This project already seems to be running.' }
   }
 
   const directoryCheck = ensureDirectory(project.path)
@@ -274,6 +348,10 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
   const blockedCommand = dangerousCommandReason(project.runCommand)
   if (blockedCommand) {
     return failProjectRun(project.id, `Blocked dangerous command token: ${blockedCommand}`)
+  }
+
+  if (await isProjectUrlReachable(project.url)) {
+    return markProjectAlreadyReachable(project)
   }
 
   appendProjectLog(project.id, 'info', `command started: ${project.runCommand}`)
@@ -287,6 +365,7 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
 
     const running: RunningProject = {
       child,
+      alreadyReachable: false,
       completed: false,
       fatalDetected: false,
       startedAt: Date.now(),
@@ -300,25 +379,32 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
     child.stdout.on('data', (chunk: Buffer) => {
       const output = chunk.toString('utf8')
       appendProjectLog(project.id, 'output', output)
-      inspectProjectOutput(project.id, running, output)
+      inspectProjectOutput(project, running, output)
     })
 
     child.stderr.on('data', (chunk: Buffer) => {
       const output = chunk.toString('utf8')
       appendProjectLog(project.id, 'error', output)
-      inspectProjectOutput(project.id, running, output)
+      inspectProjectOutput(project, running, output)
     })
 
-    child.on('error', (error) => {
+    child.on('error', async (error) => {
       if (running.completed) return
       running.completed = true
       running.fatalDetected = true
+      running.fatalSignal = error.message
       runningProjects.delete(project.id)
-      setProjectStatus(project.id, 'Error')
       appendProjectLog(project.id, 'error', `fatal error detected: ${error.message}`)
+
+      if (await isProjectUrlReachable(project.url)) {
+        markProjectAlreadyReachable(project, running)
+        return
+      }
+
+      setProjectStatus(project.id, 'Error')
     })
 
-    child.on('close', (code, signal) => {
+    child.on('close', async (code, signal) => {
       if (running.completed) return
       running.completed = true
       runningProjects.delete(project.id)
@@ -329,7 +415,20 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
         return
       }
 
+      if (running.alreadyReachable) {
+        setProjectStatus(project.id, 'Running')
+        appendProjectLog(project.id, 'info', 'process stopped')
+        return
+      }
+
+      if (running.fatalDetected && (await isProjectUrlReachable(project.url))) {
+        markProjectAlreadyReachable(project, running)
+        appendProjectLog(project.id, 'info', 'process stopped')
+        return
+      }
+
       if (running.fatalDetected) {
+        setProjectStatus(project.id, 'Error')
         appendProjectLog(project.id, 'info', 'process stopped')
         return
       }
@@ -337,9 +436,9 @@ const startProjectRun = (projectId: string): DesktopActionResult => {
       const elapsedMs = Date.now() - running.startedAt
       const exitSummary = `process exited with code ${code ?? 'unknown'}${signal ? ` and signal ${signal}` : ''}`
 
-      if (code !== null && code !== 0 && elapsedMs < QUICK_EXIT_MS) {
-        setProjectStatus(project.id, 'Error')
-        appendProjectLog(project.id, 'error', `fatal error detected: ${exitSummary} after ${elapsedMs}ms`)
+      if (code !== null && code !== 0 && elapsedMs < QUICK_EXIT_MS && (await isProjectUrlReachable(project.url))) {
+        markProjectAlreadyReachable(project, running)
+        appendProjectLog(project.id, 'info', 'process stopped')
         return
       }
 
@@ -433,7 +532,7 @@ ipcMain.handle('desktop:copy-text', (_event, text: string): DesktopActionResult 
 
 ipcMain.handle('projects:run-state', () => getProjectRunState())
 
-ipcMain.handle('projects:run', (_event, projectId: unknown): DesktopActionResult => {
+ipcMain.handle('projects:run', (_event, projectId: unknown): Promise<DesktopActionResult> | DesktopActionResult => {
   return typeof projectId === 'string' ? startProjectRun(projectId) : { ok: false, message: 'Project id is required.' }
 })
 

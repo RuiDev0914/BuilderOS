@@ -32,6 +32,7 @@ export type ProjectRunEvent = {
   projectId: string
   status?: ProjectRunStatus
   log?: ProjectLogEntry
+  message?: string
 }
 
 export type ProjectRunState = {

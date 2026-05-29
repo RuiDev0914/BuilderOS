@@ -125,6 +125,11 @@ export function App(): JSX.Element {
           [event.projectId]: [...(current[event.projectId] ?? []), log].slice(-400)
         }))
       }
+
+      if (event.message) {
+        setNotice(event.message)
+        setLastSuccess(true)
+      }
     })
 
     return () => {
