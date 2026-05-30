@@ -1,6 +1,6 @@
 {
   "name": "dev-launch-pad",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "A safe Windows desktop command center for local coding projects.",
   "main": "out/main/index.js",
   "author": "suzuk",
@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.electron.json",
     "build": "npm run typecheck && electron-vite build",
     "package": "npm run package:win",
-    "package:win": "npm run build && electron-builder --win portable --publish never",
+    "package:win": "npm run build && electron-builder --win portable --publish never && npm run package:latest",
+    "package:latest": "node scripts/copy-latest-portable.mjs",
     "preview": "electron-vite preview"
   },
   "build": {

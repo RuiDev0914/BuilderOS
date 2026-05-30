@@ -19,6 +19,16 @@ export default tseslint.config(
     }
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
     files: ['src/renderer/src/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,
