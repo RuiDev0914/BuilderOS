@@ -2,6 +2,11 @@ node_modules
 out
 dist
 release
+*.tsbuildinfo
+.tmp-asar-extract*/
+.tmp-asar-inspect/
+packaged-ui-server.pid
+/index-*.js
 *.local
 *.log
 .DS_Store

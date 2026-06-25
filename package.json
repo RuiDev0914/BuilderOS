@@ -1,12 +1,13 @@
 {
   "name": "dev-launch-pad",
   "version": "1.8.0",
-  "description": "A safe Windows desktop command center for local coding projects.",
+  "description": "BuilderOS: a personal operating system for solo developers.",
   "main": "out/main/index.js",
   "author": "suzuk",
   "homepage": "./",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:watch": "electron-vite dev --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.electron.json",
     "build": "npm run typecheck && electron-vite build",
@@ -16,8 +17,8 @@
     "preview": "electron-vite preview"
   },
   "build": {
-    "appId": "com.suzuk.devlaunchpad",
-    "productName": "Dev Launch Pad",
+    "appId": "com.suzuk.builderos",
+    "productName": "BuilderOS",
     "asar": true,
     "directories": {
       "output": "release"

@@ -1,6 +1,7 @@
 :root {
   color: #e8eef8;
   background: #08111f;
+  color-scheme: dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -23,7 +24,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -38,9 +40,9 @@ button {
 
 .topbar,
 .control-strip,
+.dashboard-insights,
 .status-grid,
-.project-grid,
-.logs-panel {
+.workspace-layout {
   width: min(1440px, 100%);
   margin-inline: auto;
 }
@@ -53,6 +55,18 @@ button {
   margin-bottom: 24px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.topbar-actions .version-badge {
+  margin-left: 0;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: #71d7ff;
@@ -63,7 +77,8 @@ button {
 }
 
 h1,
-h2 {
+h2,
+h3 {
   margin: 0;
   letter-spacing: 0;
 }
@@ -73,10 +88,36 @@ h1 {
   line-height: 1.05;
 }
 
+.tagline {
+  margin: 9px 0 0;
+  color: #b8c7da;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.32);
+  color: #bae6fd;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .primary-action,
 .secondary-action,
 .card-actions button,
 .button-grid button,
+.dev-tool-button,
+.advanced-tools-toggle,
+.refresh-git-button,
+.task-delete-button,
 .form-heading button {
   display: inline-flex;
   align-items: center;
@@ -101,15 +142,20 @@ h1 {
 }
 
 .primary-action:hover,
+.secondary-action:hover,
 .button-grid button:hover,
+.dev-tool-button:hover,
+.advanced-tools-toggle:hover,
+.refresh-git-button:hover,
 .card-actions button:hover,
+.task-delete-button:hover,
 .form-heading button:hover {
   transform: translateY(-1px);
 }
 
 .control-strip {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) auto;
+  grid-template-columns: minmax(280px, 1fr) auto auto;
   gap: 16px;
   align-items: center;
   margin-bottom: 16px;
@@ -162,9 +208,278 @@ h1 {
   color: #ecfeff;
 }
 
+.favorites-control {
+  position: relative;
+}
+
+.favorites-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fde68a;
+  cursor: pointer;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.favorites-toggle svg {
+  fill: currentColor;
+}
+
+.favorites-toggle:hover {
+  background: rgba(113, 63, 18, 0.22);
+  transform: translateY(-1px);
+}
+
+.favorites-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(420px, 88vw);
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.98), rgba(6, 12, 24, 0.98)),
+    #08111f;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
+}
+
+.favorites-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #f8fbff;
+  font-weight: 900;
+}
+
+.favorites-menu-heading strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 999px;
+  background: rgba(113, 63, 18, 0.18);
+  color: #fde68a;
+  font-size: 0.76rem;
+}
+
+.favorites-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.favorite-project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.favorite-project-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.favorite-project-copy strong {
+  color: #f8fbff;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.favorite-project-copy span {
+  color: #91a4bb;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.favorite-project-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.favorite-project-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #dce8f7;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.favorite-project-actions button:hover {
+  background: rgba(8, 47, 73, 0.3);
+}
+
+.favorite-project-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.favorites-empty {
+  margin: 0;
+  padding: 14px 4px 4px;
+  color: #91a4bb;
+  font-size: 0.84rem;
+}
+
+.quick-actions-panel {
+  display: grid;
+  gap: 14px;
+  width: min(1440px, 100%);
+  margin: 0 auto 16px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.82), rgba(6, 12, 24, 0.88)),
+    #08111f;
+}
+
+.quick-actions-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quick-actions-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f8fbff;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.quick-actions-heading h2 svg {
+  color: #facc15;
+}
+
+.quick-actions-heading > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 340px;
+  padding: 0 10px;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.24);
+  color: #bae6fd;
+  font-size: 0.76rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.quick-action-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #e8eef8;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.quick-action-card:hover {
+  border-color: rgba(34, 211, 238, 0.36);
+  background: rgba(8, 47, 73, 0.28);
+  transform: translateY(-1px);
+}
+
+.quick-action-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.quick-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.28);
+  color: #67e8f9;
+}
+
+.quick-action-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.quick-action-copy strong {
+  color: #f8fbff;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.quick-action-copy small {
+  color: #91a4bb;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dashboard-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -175,6 +490,13 @@ h1 {
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 8px;
   background: rgba(13, 23, 39, 0.68);
+}
+
+.metric-primary {
+  border-color: rgba(34, 211, 238, 0.34);
+  background:
+    linear-gradient(180deg, rgba(34, 211, 238, 0.13), rgba(13, 23, 39, 0.72)),
+    rgba(13, 23, 39, 0.68);
 }
 
 .metric span {
@@ -188,6 +510,141 @@ h1 {
   margin-top: 7px;
   color: #f8fbff;
   font-size: 1.65rem;
+}
+
+.insight-card {
+  min-width: 0;
+}
+
+.insight-card strong {
+  min-height: 34px;
+  font-size: 1.35rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.insight-card p {
+  margin: 8px 0 0;
+  color: #91a4bb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.smart-start-card {
+  display: grid;
+  gap: 14px;
+  width: min(1440px, 100%);
+  margin: 0 auto 16px;
+  padding: 18px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(8, 47, 73, 0.24), rgba(13, 23, 39, 0.72)),
+    rgba(13, 23, 39, 0.72);
+}
+
+.smart-start-card.empty {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.smart-start-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.smart-start-heading h2 {
+  color: #f8fbff;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.smart-start-content {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.4fr) max-content;
+  gap: 14px;
+  align-items: center;
+}
+
+.smart-start-project {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.smart-start-project strong {
+  color: #f8fbff;
+  font-size: 1.04rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.smart-start-project span {
+  width: fit-content;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.12);
+  color: #a5f3fc;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.smart-start-meta {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.55fr) minmax(160px, 1fr);
+  gap: 10px;
+  margin: 0;
+}
+
+.smart-start-meta div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.22);
+}
+
+.smart-start-meta dt {
+  margin-bottom: 5px;
+  color: #7890aa;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.smart-start-meta dd {
+  margin: 0;
+  color: #d7e3f2;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.smart-start-action {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: rgba(8, 47, 73, 0.42);
+  color: #e0f2fe;
+  font-size: 0.84rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.smart-start-action svg {
+  flex: 0 0 auto;
+}
+
+.smart-start-empty p {
+  margin: 0;
+  color: #91a4bb;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .safety-note,
@@ -222,17 +679,235 @@ h1 {
   color: #bbf7d0;
 }
 
+.public-release-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 16px;
+  width: min(1440px, 100%);
+  margin: 16px auto 0;
+}
+
+.about-panel,
+.roadmap-panel {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(13, 23, 39, 0.68);
+}
+
+.about-panel summary,
+.roadmap-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 62px;
+  padding: 0 18px;
+  color: #f8fbff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.about-panel summary::-webkit-details-marker,
+.roadmap-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.about-panel summary span,
+.roadmap-panel summary span {
+  display: grid;
+  gap: 3px;
+}
+
+.about-panel summary strong,
+.roadmap-panel summary strong {
+  color: #f8fbff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.about-panel summary svg,
+.roadmap-panel summary svg {
+  flex: 0 0 auto;
+  color: #67e8f9;
+  transition: transform 160ms ease;
+}
+
+.about-panel[open] summary svg,
+.roadmap-panel[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.about-panel p:last-child {
+  margin: 0;
+  padding: 0 18px 18px;
+  color: #b8c7da;
+  line-height: 1.55;
+}
+
+.roadmap-panel {
+  display: block;
+}
+
+.roadmap-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0 18px 18px;
+  list-style: none;
+}
+
+.roadmap-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.24);
+  color: #d7e3f2;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.roadmap-list li svg {
+  flex: 0 0 auto;
+  color: #67e8f9;
+}
+
+.recent-activity-panel {
+  display: grid;
+  gap: 14px;
+  width: min(1440px, 100%);
+  margin: 16px auto 0;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.82), rgba(6, 12, 24, 0.88)),
+    #08111f;
+}
+
+.recent-activity-panel .section-heading h2 {
+  color: #f8fbff;
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.recent-activity-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.24);
+  color: #bae6fd;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.recent-activity-list {
+  display: grid;
+  gap: 7px;
+}
+
+.recent-activity-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.22);
+  color: #d7e3f2;
+}
+
+.recent-activity-item time {
+  color: #71d7ff;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.recent-activity-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.recent-activity-empty {
+  margin: 0;
+  padding: 14px 0 2px;
+  color: #91a4bb;
+}
+
+.workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+  gap: 16px;
+  align-items: start;
+}
+
+.project-list {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.project-section {
+  display: grid;
+  gap: 10px;
+}
+
+.project-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+}
+
+.project-section-heading h2 {
+  color: #f8fbff;
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.project-section-heading span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  color: #b8c7da;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  align-items: start;
+  align-content: start;
 }
 
 .project-card {
-  display: flex;
-  min-height: 430px;
-  flex-direction: column;
-  justify-content: space-between;
+  display: block;
+  align-self: start;
+  height: auto;
+  min-height: 0;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 8px;
   background:
@@ -249,12 +924,56 @@ h1 {
     0 0 0 1px rgba(34, 211, 238, 0.18);
 }
 
+.project-card.favorite {
+  border-color: rgba(251, 191, 36, 0.26);
+}
+
 .card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 18px 18px 12px;
+}
+
+.card-title,
+.details-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.card-title > div,
+.details-title > div {
+  min-width: 0;
+}
+
+.project-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.28);
+  color: #e0f2fe;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.project-icon.custom {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: rgba(113, 63, 18, 0.22);
+}
+
+.project-icon.large {
+  width: 48px;
+  height: 48px;
+  font-size: 1.55rem;
 }
 
 .card-header h2 {
@@ -338,11 +1057,31 @@ h1 {
   background: rgba(15, 23, 42, 0.72);
 }
 
+.card-actions button.favorite-button {
+  width: 34px;
+  min-height: 34px;
+  color: #94a3b8;
+}
+
+.card-actions button.favorite-button svg {
+  fill: none;
+}
+
+.card-actions button.favorite-button.active {
+  border-color: rgba(251, 191, 36, 0.38);
+  background: rgba(113, 63, 18, 0.28);
+  color: #fde68a;
+}
+
+.card-actions button.favorite-button.active svg {
+  fill: currentColor;
+}
+
 .project-meta {
   display: grid;
   gap: 10px;
   margin: 0;
-  padding: 0 18px 16px;
+  padding: 0 18px 14px;
 }
 
 .project-meta div {
@@ -370,8 +1109,8 @@ h1 {
 .button-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 16px 18px 18px;
+  gap: 7px;
+  padding: 12px 16px 16px;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(2, 6, 23, 0.18);
 }
@@ -384,6 +1123,12 @@ h1 {
   color: #dce8f7;
   font-size: 0.86rem;
   font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.button-grid button svg {
+  flex: 0 0 auto;
 }
 
 .button-grid button.run-action {
@@ -392,14 +1137,28 @@ h1 {
   color: #dcfce7;
 }
 
+.button-grid button.task-run-button {
+  justify-content: flex-start;
+}
+
 .button-grid button.stop-action {
   border-color: rgba(248, 113, 113, 0.38);
   background: rgba(127, 29, 29, 0.46);
   color: #fee2e2;
 }
 
-.button-grid button.wide {
+.button-grid .wide {
   grid-column: 1 / -1;
+}
+
+.button-grid button.dev-tools-toggle {
+  justify-content: center;
+  min-height: 40px;
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.button-grid button.dev-tools-toggle svg {
+  color: #67e8f9;
 }
 
 .button-grid button:disabled {
@@ -415,39 +1174,527 @@ h1 {
   text-align: center;
 }
 
-.logs-panel {
-  margin-top: 16px;
+.empty-detail {
+  padding: 28px 12px;
+  color: #91a4bb;
+  text-align: center;
+}
+
+.details-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 36px);
+  padding: 14px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(13, 23, 39, 0.94), rgba(6, 12, 24, 0.96)),
     #08111f;
-  overflow: hidden;
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.26);
+  overflow: auto;
 }
 
-.logs-heading {
+.details-heading,
+.section-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  gap: 12px;
 }
 
-.logs-heading h2 {
+.details-title {
+  align-items: center;
+}
+
+.details-heading h2,
+.section-heading h3 {
   color: #f8fbff;
   font-size: 1.18rem;
   line-height: 1.2;
 }
 
+.details-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.2);
+}
+
+.details-list div {
+  min-width: 0;
+}
+
+.details-list dt {
+  margin-bottom: 4px;
+  color: #7890aa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.details-list dd {
+  margin: 0;
+  color: #d7e3f2;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.refresh-git-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(103, 232, 249, 0.16);
+  background: rgba(8, 47, 73, 0.28);
+  color: #bae6fd;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.refresh-git-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
+}
+
+.refresh-git-button svg {
+  flex: 0 0 auto;
+}
+
+.refresh-git-button svg.spinning {
+  animation: spin 900ms linear infinite;
+}
+
+.git-summary-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.git-summary-list div {
+  min-width: 0;
+}
+
+.git-summary-list dt {
+  margin-bottom: 4px;
+  color: #7890aa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.git-summary-list dd,
+.git-summary-message {
+  margin: 0;
+  color: #d7e3f2;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.git-summary-message {
+  padding: 2px 0 1px;
+  color: #bfd0e4;
+}
+
+.git-summary-message.error {
+  color: #fecaca;
+}
+
+.git-status-value {
+  white-space: pre-wrap;
+}
+
+.panel-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.2);
+}
+
+.task-profile-list {
+  display: grid;
+  gap: 8px;
+}
+
+.task-profile-item {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.task-profile-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.task-profile-copy strong {
+  color: #f8fbff;
+  font-size: 0.86rem;
+}
+
+.task-profile-copy code {
+  color: #cbd8e8;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.task-profile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.notes-section {
+  gap: 12px;
+}
+
+.icon-section {
+  gap: 12px;
+}
+
+.icon-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.24);
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.project-icon-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.project-icon-editor label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: #aebed2;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.project-icon-editor input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #eef7ff;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1rem;
+}
+
+.project-icon-editor input:focus {
+  border-color: rgba(34, 211, 238, 0.58);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+}
+
+.project-icon-editor .secondary-action {
+  min-height: 40px;
+}
+
+.project-icon-editor .secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.work-time-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.work-time-grid div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.work-time-grid span {
+  display: block;
+  color: #7890aa;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.work-time-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: #f8fbff;
+  font-size: 0.92rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.notes-save-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  color: #9fb0c7;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.notes-save-state.state-saving {
+  border-color: rgba(34, 211, 238, 0.22);
+  color: #bae6fd;
+}
+
+.notes-save-state.state-saved {
+  border-color: rgba(16, 185, 129, 0.26);
+  color: #bbf7d0;
+}
+
+.notes-save-state.state-error {
+  border-color: rgba(248, 113, 113, 0.34);
+  color: #fecaca;
+}
+
+.project-notes-input {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e8eef8;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.project-notes-input::placeholder {
+  color: #64748b;
+}
+
+.project-notes-input:focus {
+  border-color: rgba(34, 211, 238, 0.58);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+}
+
+.publish-section {
+  gap: 12px;
+}
+
+.publish-button {
+  border-color: rgba(34, 211, 238, 0.2);
+  background: rgba(8, 47, 73, 0.42);
+  color: #e0f2fe;
+}
+
+.publish-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  color: #9fb0c7;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.publish-state.state-success {
+  border-color: rgba(16, 185, 129, 0.26);
+  color: #bbf7d0;
+}
+
+.publish-state.state-failed {
+  border-color: rgba(248, 113, 113, 0.34);
+  color: #fecaca;
+}
+
+.publish-latest,
+.publish-result {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.publish-latest span,
+.publish-latest time {
+  color: #7890aa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.publish-latest strong {
+  color: #f8fbff;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.publish-latest.latest-success,
+.publish-result.success {
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.publish-latest.latest-failed,
+.publish-result.error {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.publish-result strong {
+  color: #f8fbff;
+  font-size: 0.86rem;
+}
+
+.publish-result p {
+  margin: 0;
+  color: #bfd0e4;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.publish-result pre {
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  color: #dbeafe;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dev-tools-section:focus {
+  outline: 2px solid rgba(34, 211, 238, 0.34);
+  outline-offset: 2px;
+}
+
+.dev-tools-main,
+.advanced-tools-panel {
+  display: grid;
+  gap: 7px;
+}
+
+.dev-tools-main {
+  grid-template-columns: 1fr;
+}
+
+.advanced-tools-panel {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dev-tool-button,
+.advanced-tools-toggle {
+  width: 100%;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.88);
+  color: #dce8f7;
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.dev-tool-button {
+  justify-content: flex-start;
+  min-height: 36px;
+}
+
+.advanced-tools-toggle {
+  justify-content: space-between;
+  min-height: 34px;
+  margin-top: 2px;
+  border-color: rgba(103, 232, 249, 0.14);
+  background: rgba(8, 47, 73, 0.3);
+  color: #bae6fd;
+}
+
+.advanced-tools-toggle svg {
+  color: #67e8f9;
+  transition: transform 160ms ease;
+}
+
+.advanced-tools-toggle svg.expanded {
+  transform: rotate(180deg);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.advanced-tools-panel .dev-tool-button {
+  min-height: 32px;
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(2, 6, 23, 0.24);
+  color: #bfd0e4;
+  font-size: 0.76rem;
+}
+
+.dev-tool-button svg,
+.advanced-tools-toggle svg {
+  flex: 0 0 auto;
+}
+
+.dev-tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
 .logs-body {
   display: grid;
   align-content: start;
-  min-height: 180px;
-  max-height: 320px;
+  min-height: 140px;
+  max-height: 260px;
   overflow: auto;
-  padding: 12px 18px 18px;
-  background: rgba(2, 6, 23, 0.24);
+  padding-top: 2px;
 }
 
 .log-line {
@@ -501,12 +1748,268 @@ h1 {
 }
 
 .project-form {
-  width: min(560px, 100%);
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
   padding: 22px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
   background: #0b1525;
   box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48);
+}
+
+.commit-modal {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: #0b1525;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48);
+}
+
+.wizard-modal,
+.settings-modal {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.98), rgba(6, 12, 24, 0.98)),
+    #0b1525;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48);
+}
+
+.wizard-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.wizard-heading h2 {
+  color: #f8fbff;
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+
+.wizard-heading p:last-child {
+  margin: 0;
+  color: #b8c7da;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.wizard-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-steps li {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.wizard-steps span {
+  color: #71d7ff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wizard-steps strong {
+  color: #f8fbff;
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.settings-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.settings-section-heading h3 {
+  color: #f8fbff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.settings-field-grid,
+.settings-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-action-grid.two {
+  grid-template-columns: repeat(2, minmax(0, max-content));
+}
+
+.settings-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: #aebed2;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.settings-field input,
+.settings-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #eef7ff;
+}
+
+.settings-field input:focus,
+.settings-field select:focus {
+  border-color: rgba(34, 211, 238, 0.58);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+}
+
+.settings-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.34);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #22d3ee;
+}
+
+.settings-toggle span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-toggle strong {
+  color: #f8fbff;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.settings-toggle small {
+  color: #9fb0c7;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.settings-action-grid .secondary-action {
+  width: 100%;
+  min-height: 40px;
+}
+
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+.danger-action {
+  border-color: rgba(248, 113, 113, 0.24);
+  background: rgba(127, 29, 29, 0.24);
+  color: #fecaca;
+}
+
+.settings-meta-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.settings-meta-list div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.settings-meta-list dt {
+  color: #9fb0c7;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.settings-meta-list dd {
+  margin: 0;
+  color: #f8fbff;
+  font-size: 0.94rem;
+  font-weight: 900;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.settings-row h3 {
+  color: #f8fbff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.settings-row p:last-child {
+  margin: 8px 0 0;
+  color: #9fb0c7;
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .form-heading {
@@ -517,7 +2020,22 @@ h1 {
   margin-bottom: 18px;
 }
 
-.project-form label {
+.form-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.form-section-heading h3 {
+  color: #f8fbff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.project-form label,
+.commit-modal label {
   display: grid;
   gap: 8px;
   margin-bottom: 14px;
@@ -527,7 +2045,8 @@ h1 {
 }
 
 .project-form input,
-.project-form select {
+.project-form select,
+.commit-modal input {
   width: 100%;
   min-height: 44px;
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -539,9 +2058,55 @@ h1 {
 }
 
 .project-form input:focus,
-.project-form select:focus {
+.project-form select:focus,
+.commit-modal input:focus {
   border-color: rgba(34, 211, 238, 0.7);
   box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+}
+
+.form-task-profiles {
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.22);
+}
+
+.compact-action {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.task-profile-editor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.task-profile-editor {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.42fr) minmax(220px, 1fr) 38px;
+  gap: 10px;
+  align-items: end;
+}
+
+.task-profile-editor label {
+  margin-bottom: 0;
+}
+
+.task-delete-button {
+  width: 38px;
+  min-height: 38px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.26);
+  color: #fecaca;
+}
+
+.task-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
+  transform: none;
 }
 
 .form-actions {
@@ -551,14 +2116,1913 @@ h1 {
   margin-top: 20px;
 }
 
+.commit-path,
+.commit-command-preview,
+.commit-output {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.22);
+}
+
+.commit-path span,
+.commit-command-preview span {
+  color: #7890aa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.commit-path code,
+.commit-command-preview pre,
+.commit-output pre {
+  margin: 0;
+  color: #dbeafe;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.commit-output {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.commit-output strong {
+  color: #e8eef8;
+}
+
+.commit-output.success {
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.commit-output.error {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
 .secondary-action {
   padding: 0 16px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.72);
 }
 
+.settings-action {
+  min-height: 38px;
+  color: #dce8f7;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.theme-toggle-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #dce8f7;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.theme-toggle-action button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: #9fb0c7;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.theme-toggle-action button.active {
+  background: rgba(34, 211, 238, 0.16);
+  color: #ecfeff;
+}
+
+.theme-toggle-action button:hover {
+  color: #eef7ff;
+}
+
+.settings-helper {
+  color: #91a4bb;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 @media (max-width: 1180px) {
   .project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .smart-start-content {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .smart-start-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-start-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .settings-field-grid,
+  .settings-toggle-list,
+  .settings-action-grid,
+  .settings-action-grid.two,
+  .settings-meta-list {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-row .secondary-action {
+    width: 100%;
+  }
+}
+
+html[data-theme='light'] {
+  color: #1e293b;
+  background: #f5f7fb;
+  color-scheme: light;
+}
+
+html[data-theme='light'] body {
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.1), transparent 34%),
+    linear-gradient(180deg, #f8fafc 0%, #eef4fb 48%, #e7eef7 100%);
+  color: #1e293b;
+}
+
+html[data-theme='light'] .app-shell {
+  color: #1e293b;
+}
+
+html[data-theme='light'] h1,
+html[data-theme='light'] .quick-actions-heading h2,
+html[data-theme='light'] .smart-start-heading h2,
+html[data-theme='light'] .recent-activity-panel .section-heading h2,
+html[data-theme='light'] .project-section-heading h2,
+html[data-theme='light'] .card-header h2,
+html[data-theme='light'] .details-heading h2,
+html[data-theme='light'] .section-heading h3,
+html[data-theme='light'] .settings-section-heading h3,
+html[data-theme='light'] .settings-row h3,
+html[data-theme='light'] .wizard-heading h2,
+html[data-theme='light'] .wizard-steps strong,
+html[data-theme='light'] .about-panel summary strong,
+html[data-theme='light'] .roadmap-panel summary strong,
+html[data-theme='light'] .quick-action-copy strong,
+html[data-theme='light'] .smart-start-project strong,
+html[data-theme='light'] .task-profile-copy strong,
+html[data-theme='light'] .settings-toggle strong,
+html[data-theme='light'] .settings-meta-list dd,
+html[data-theme='light'] .commit-output strong {
+  color: #0f172a;
+}
+
+html[data-theme='light'] .eyebrow,
+html[data-theme='light'] .recent-activity-item time {
+  color: #0369a1;
+}
+
+html[data-theme='light'] .tagline,
+html[data-theme='light'] .quick-action-copy small,
+html[data-theme='light'] .insight-card p,
+html[data-theme='light'] .smart-start-empty p,
+html[data-theme='light'] .recent-activity-empty,
+html[data-theme='light'] .favorites-empty,
+html[data-theme='light'] .empty-state,
+html[data-theme='light'] .empty-detail,
+html[data-theme='light'] .settings-helper,
+html[data-theme='light'] .settings-toggle small,
+html[data-theme='light'] .settings-row p:last-child,
+html[data-theme='light'] .about-panel p:last-child {
+  color: #64748b;
+}
+
+html[data-theme='light'] .quick-actions-panel,
+html[data-theme='light'] .recent-activity-panel,
+html[data-theme='light'] .details-panel,
+html[data-theme='light'] .project-form,
+html[data-theme='light'] .commit-modal,
+html[data-theme='light'] .wizard-modal,
+html[data-theme='light'] .settings-modal {
+  border-color: rgba(15, 23, 42, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
+    #ffffff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme='light'] .project-card {
+  border-color: rgba(15, 23, 42, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98)),
+    #ffffff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.1);
+}
+
+html[data-theme='light'] .project-card.selected {
+  border-color: rgba(2, 132, 199, 0.48);
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.1),
+    0 0 0 1px rgba(2, 132, 199, 0.16);
+}
+
+html[data-theme='light'] .metric,
+html[data-theme='light'] .settings-section,
+html[data-theme='light'] .settings-row,
+html[data-theme='light'] .about-panel,
+html[data-theme='light'] .roadmap-panel,
+html[data-theme='light'] .details-list,
+html[data-theme='light'] .panel-section,
+html[data-theme='light'] .task-profile-item,
+html[data-theme='light'] .settings-toggle,
+html[data-theme='light'] .settings-meta-list div,
+html[data-theme='light'] .smart-start-meta div,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path,
+html[data-theme='light'] .commit-command-preview,
+html[data-theme='light'] .commit-output {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme='light'] .metric-primary,
+html[data-theme='light'] .smart-start-card {
+  border-color: rgba(2, 132, 199, 0.22);
+  background:
+    linear-gradient(180deg, rgba(224, 242, 254, 0.62), rgba(255, 255, 255, 0.88)),
+    #ffffff;
+}
+
+html[data-theme='light'] .search-box,
+html[data-theme='light'] .filter-tabs,
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu,
+html[data-theme='light'] .button-grid,
+html[data-theme='light'] .advanced-tools-panel {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: #0369a1;
+}
+
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea,
+html[data-theme='light'] .settings-field input,
+html[data-theme='light'] .settings-field select,
+html[data-theme='light'] .project-icon-editor input,
+html[data-theme='light'] .notes-section textarea {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #94a3b8;
+}
+
+html[data-theme='light'] .primary-action {
+  border-color: rgba(2, 132, 199, 0.46);
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.18), rgba(2, 132, 199, 0.12));
+  color: #075985;
+  box-shadow: 0 12px 26px rgba(2, 132, 199, 0.12);
+}
+
+html[data-theme='light'] .secondary-action,
+html[data-theme='light'] .card-actions button,
+html[data-theme='light'] .form-heading button,
+html[data-theme='light'] .button-grid button,
+html[data-theme='light'] .dev-tool-button,
+html[data-theme='light'] .advanced-tools-toggle,
+html[data-theme='light'] .refresh-git-button,
+html[data-theme='light'] .task-delete-button {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: #334155;
+}
+
+html[data-theme='light'] .theme-toggle-action,
+html[data-theme='light'] .settings-action {
+  color: #334155;
+}
+
+html[data-theme='light'] .theme-toggle-action {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+html[data-theme='light'] .theme-toggle-action button {
+  color: #64748b;
+}
+
+html[data-theme='light'] .theme-toggle-action button.active {
+  background: rgba(14, 165, 233, 0.14);
+  color: #075985;
+}
+
+html[data-theme='light'] .theme-toggle-action button:hover {
+  color: #0f172a;
+}
+
+html[data-theme='light'] .version-badge,
+html[data-theme='light'] .recent-activity-count,
+html[data-theme='light'] .quick-actions-heading > span,
+html[data-theme='light'] .project-section-heading span {
+  border-color: rgba(2, 132, 199, 0.2);
+  background: rgba(224, 242, 254, 0.72);
+  color: #075985;
+}
+
+html[data-theme='light'] .project-icon,
+html[data-theme='light'] .quick-action-icon,
+html[data-theme='light'] .icon-preview {
+  border-color: rgba(2, 132, 199, 0.18);
+  background: rgba(224, 242, 254, 0.72);
+  color: #0369a1;
+}
+
+html[data-theme='light'] .project-icon.custom,
+html[data-theme='light'] .card-actions button.favorite-button.active {
+  border-color: rgba(217, 119, 6, 0.26);
+  background: rgba(254, 243, 199, 0.8);
+  color: #92400e;
+}
+
+html[data-theme='light'] .project-meta dt,
+html[data-theme='light'] .details-list dt,
+html[data-theme='light'] .git-summary-list dt,
+html[data-theme='light'] .smart-start-meta dt,
+html[data-theme='light'] .commit-path span,
+html[data-theme='light'] .commit-command-preview span,
+html[data-theme='light'] .settings-meta-list dt {
+  color: #64748b;
+}
+
+html[data-theme='light'] .project-meta dd,
+html[data-theme='light'] .details-list dd,
+html[data-theme='light'] .git-summary-list dd,
+html[data-theme='light'] .git-summary-message,
+html[data-theme='light'] .task-profile-copy code,
+html[data-theme='light'] .smart-start-meta dd,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path code,
+html[data-theme='light'] .commit-command-preview pre,
+html[data-theme='light'] .commit-output pre {
+  color: #334155;
+}
+
+html[data-theme='light'] .status-stopped {
+  border-color: rgba(100, 116, 139, 0.26);
+  background: rgba(241, 245, 249, 0.88);
+  color: #475569;
+}
+
+html[data-theme='light'] .tone-cyan {
+  background: rgba(14, 165, 233, 0.12);
+  color: #075985;
+}
+
+html[data-theme='light'] .tone-violet {
+  background: rgba(124, 58, 237, 0.1);
+  color: #5b21b6;
+}
+
+html[data-theme='light'] .tone-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+html[data-theme='light'] .safety-note {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: rgba(254, 243, 199, 0.76);
+  color: #92400e;
+}
+
+html[data-theme='light'] .notice-bar {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  color: #475569;
+}
+
+html[data-theme='light'] .notice-bar[data-success='true'] {
+  border-color: rgba(5, 150, 105, 0.24);
+  color: #047857;
+}
+
+html[data-theme='light'] .danger-action,
+html[data-theme='light'] .button-grid button.stop-action {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(254, 226, 226, 0.72);
+  color: #991b1b;
+}
+
+html[data-theme='light'] .button-grid button.run-action {
+  border-color: rgba(5, 150, 105, 0.24);
+  background: rgba(220, 252, 231, 0.74);
+  color: #047857;
+}
+
+html[data-theme='light'] .modal-backdrop {
+  background: rgba(226, 232, 240, 0.74);
+}
+
+html[data-theme='light'] .quick-action-card,
+html[data-theme='light'] .favorite-project-row,
+html[data-theme='light'] .favorite-project-actions button,
+html[data-theme='light'] .wizard-steps li,
+html[data-theme='light'] .work-time-grid div,
+html[data-theme='light'] .publish-latest,
+html[data-theme='light'] .publish-result,
+html[data-theme='light'] .form-task-profiles {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme='light'] .quick-action-card:hover,
+html[data-theme='light'] .favorite-project-actions button:hover {
+  border-color: rgba(2, 132, 199, 0.24);
+  background: rgba(224, 242, 254, 0.62);
+}
+
+html[data-theme='light'] .favorites-menu-heading,
+html[data-theme='light'] .favorite-project-copy strong,
+html[data-theme='light'] .metric strong,
+html[data-theme='light'] .about-panel summary,
+html[data-theme='light'] .roadmap-panel summary,
+html[data-theme='light'] .form-section-heading h3,
+html[data-theme='light'] .publish-latest strong,
+html[data-theme='light'] .publish-result strong,
+html[data-theme='light'] .work-time-grid strong {
+  color: #0f172a;
+}
+
+html[data-theme='light'] .favorite-project-copy span,
+html[data-theme='light'] .metric span,
+html[data-theme='light'] .project-icon-editor label,
+html[data-theme='light'] .settings-field,
+html[data-theme='light'] .project-form label,
+html[data-theme='light'] .commit-modal label,
+html[data-theme='light'] .work-time-grid span,
+html[data-theme='light'] .publish-latest span,
+html[data-theme='light'] .publish-latest time,
+html[data-theme='light'] .log-line time,
+html[data-theme='light'] .empty-log {
+  color: #64748b;
+}
+
+html[data-theme='light'] .git-summary-list dt,
+html[data-theme='light'] .log-line {
+  color: #64748b;
+}
+
+html[data-theme='light'] .git-summary-list dd,
+html[data-theme='light'] .log-line span,
+html[data-theme='light'] .log-info span,
+html[data-theme='light'] .log-output span,
+html[data-theme='light'] .publish-result p,
+html[data-theme='light'] .publish-result pre {
+  color: #334155;
+}
+
+html[data-theme='light'] .log-error span,
+html[data-theme='light'] .git-summary-message.error {
+  color: #b91c1c;
+}
+
+html[data-theme='light'] .status-running,
+html[data-theme='light'] .notes-save-state.state-saved,
+html[data-theme='light'] .publish-state.state-success {
+  border-color: rgba(5, 150, 105, 0.24);
+  background: rgba(220, 252, 231, 0.74);
+  color: #047857;
+}
+
+html[data-theme='light'] .status-error,
+html[data-theme='light'] .notes-save-state.state-error,
+html[data-theme='light'] .publish-state.state-failed {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(254, 226, 226, 0.72);
+  color: #991b1b;
+}
+
+html[data-theme='light'] .notes-save-state,
+html[data-theme='light'] .publish-state {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(241, 245, 249, 0.88);
+  color: #475569;
+}
+
+html[data-theme='light'] {
+  color: #111827;
+  background: #eef2f7;
+}
+
+html[data-theme='light'] body {
+  background:
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 44%, #e5eaf2 100%),
+    #eef2f7;
+  color: #111827;
+}
+
+html[data-theme='light'] .app-shell {
+  color: #111827;
+}
+
+html[data-theme='light'] h1,
+html[data-theme='light'] h2,
+html[data-theme='light'] h3,
+html[data-theme='light'] .quick-actions-heading h2,
+html[data-theme='light'] .smart-start-heading h2,
+html[data-theme='light'] .recent-activity-panel .section-heading h2,
+html[data-theme='light'] .project-section-heading h2,
+html[data-theme='light'] .card-header h2,
+html[data-theme='light'] .details-heading h2,
+html[data-theme='light'] .section-heading h3,
+html[data-theme='light'] .settings-section-heading h3,
+html[data-theme='light'] .settings-row h3,
+html[data-theme='light'] .wizard-heading h2,
+html[data-theme='light'] .wizard-steps strong,
+html[data-theme='light'] .about-panel summary strong,
+html[data-theme='light'] .roadmap-panel summary strong,
+html[data-theme='light'] .quick-action-copy strong,
+html[data-theme='light'] .smart-start-project strong,
+html[data-theme='light'] .task-profile-copy strong,
+html[data-theme='light'] .settings-toggle strong,
+html[data-theme='light'] .settings-meta-list dd,
+html[data-theme='light'] .commit-output strong,
+html[data-theme='light'] .favorite-project-copy strong,
+html[data-theme='light'] .metric strong,
+html[data-theme='light'] .publish-latest strong,
+html[data-theme='light'] .publish-result strong,
+html[data-theme='light'] .work-time-grid strong {
+  color: #0b1220;
+}
+
+html[data-theme='light'] .tagline,
+html[data-theme='light'] .quick-action-copy small,
+html[data-theme='light'] .insight-card p,
+html[data-theme='light'] .smart-start-empty p,
+html[data-theme='light'] .recent-activity-empty,
+html[data-theme='light'] .favorites-empty,
+html[data-theme='light'] .empty-state,
+html[data-theme='light'] .empty-detail,
+html[data-theme='light'] .settings-helper,
+html[data-theme='light'] .settings-toggle small,
+html[data-theme='light'] .settings-row p:last-child,
+html[data-theme='light'] .about-panel p:last-child,
+html[data-theme='light'] .favorite-project-copy span,
+html[data-theme='light'] .metric span,
+html[data-theme='light'] .project-icon-editor label,
+html[data-theme='light'] .settings-field,
+html[data-theme='light'] .project-form label,
+html[data-theme='light'] .commit-modal label,
+html[data-theme='light'] .work-time-grid span,
+html[data-theme='light'] .publish-latest span,
+html[data-theme='light'] .publish-latest time,
+html[data-theme='light'] .log-line time,
+html[data-theme='light'] .empty-log,
+html[data-theme='light'] .project-meta dt,
+html[data-theme='light'] .details-list dt,
+html[data-theme='light'] .git-summary-list dt,
+html[data-theme='light'] .smart-start-meta dt,
+html[data-theme='light'] .commit-path span,
+html[data-theme='light'] .commit-command-preview span,
+html[data-theme='light'] .settings-meta-list dt {
+  color: #334155;
+}
+
+html[data-theme='light'] .eyebrow,
+html[data-theme='light'] .recent-activity-item time {
+  color: #075985;
+}
+
+html[data-theme='light'] .quick-actions-panel,
+html[data-theme='light'] .recent-activity-panel,
+html[data-theme='light'] .details-panel,
+html[data-theme='light'] .project-form,
+html[data-theme='light'] .commit-modal,
+html[data-theme='light'] .wizard-modal,
+html[data-theme='light'] .settings-modal {
+  border-color: rgba(100, 116, 139, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98)),
+    #ffffff;
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+html[data-theme='light'] .project-card {
+  border-color: rgba(100, 116, 139, 0.26);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
+    #ffffff;
+  box-shadow:
+    0 16px 34px rgba(15, 23, 42, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.92) inset;
+}
+
+html[data-theme='light'] .project-card.selected {
+  border-color: rgba(2, 132, 199, 0.76);
+  box-shadow:
+    0 18px 38px rgba(15, 23, 42, 0.12),
+    0 0 0 2px rgba(2, 132, 199, 0.18);
+}
+
+html[data-theme='light'] .project-card.favorite {
+  border-color: rgba(217, 119, 6, 0.42);
+}
+
+html[data-theme='light'] .metric,
+html[data-theme='light'] .settings-section,
+html[data-theme='light'] .settings-row,
+html[data-theme='light'] .about-panel,
+html[data-theme='light'] .roadmap-panel,
+html[data-theme='light'] .details-list,
+html[data-theme='light'] .panel-section,
+html[data-theme='light'] .task-profile-item,
+html[data-theme='light'] .settings-toggle,
+html[data-theme='light'] .settings-meta-list div,
+html[data-theme='light'] .smart-start-meta div,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path,
+html[data-theme='light'] .commit-command-preview,
+html[data-theme='light'] .commit-output,
+html[data-theme='light'] .quick-action-card,
+html[data-theme='light'] .favorite-project-row,
+html[data-theme='light'] .favorite-project-actions button,
+html[data-theme='light'] .wizard-steps li,
+html[data-theme='light'] .work-time-grid div,
+html[data-theme='light'] .publish-latest,
+html[data-theme='light'] .publish-result,
+html[data-theme='light'] .form-task-profiles {
+  border-color: rgba(100, 116, 139, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+html[data-theme='light'] .metric-primary,
+html[data-theme='light'] .smart-start-card {
+  border-color: rgba(2, 132, 199, 0.34);
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.98)),
+    #ffffff;
+  box-shadow: 0 14px 34px rgba(14, 116, 144, 0.1);
+}
+
+html[data-theme='light'] .search-box,
+html[data-theme='light'] .filter-tabs,
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu,
+html[data-theme='light'] .button-grid,
+html[data-theme='light'] .advanced-tools-panel,
+html[data-theme='light'] .theme-toggle-action {
+  border-color: rgba(100, 116, 139, 0.28);
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme='light'] .search-box input {
+  color: #0f172a;
+}
+
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea,
+html[data-theme='light'] .settings-field input,
+html[data-theme='light'] .settings-field select,
+html[data-theme='light'] .project-icon-editor input,
+html[data-theme='light'] .notes-section textarea,
+html[data-theme='light'] .project-form input,
+html[data-theme='light'] .project-form select,
+html[data-theme='light'] .commit-modal input {
+  border-color: rgba(100, 116, 139, 0.36);
+  background: #ffffff;
+  color: #0b1220;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #64748b;
+}
+
+html[data-theme='light'] input:focus,
+html[data-theme='light'] select:focus,
+html[data-theme='light'] textarea:focus,
+html[data-theme='light'] .settings-field input:focus,
+html[data-theme='light'] .settings-field select:focus,
+html[data-theme='light'] .project-icon-editor input:focus,
+html[data-theme='light'] .project-notes-input:focus,
+html[data-theme='light'] .project-form input:focus,
+html[data-theme='light'] .project-form select:focus,
+html[data-theme='light'] .commit-modal input:focus {
+  border-color: rgba(2, 132, 199, 0.82);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+}
+
+html[data-theme='light'] .primary-action {
+  border-color: #0369a1;
+  background: linear-gradient(180deg, #0ea5e9, #0284c7);
+  color: #ffffff;
+  box-shadow: 0 12px 26px rgba(2, 132, 199, 0.22);
+}
+
+html[data-theme='light'] .secondary-action,
+html[data-theme='light'] .card-actions button,
+html[data-theme='light'] .form-heading button,
+html[data-theme='light'] .button-grid button,
+html[data-theme='light'] .dev-tool-button,
+html[data-theme='light'] .advanced-tools-toggle,
+html[data-theme='light'] .refresh-git-button,
+html[data-theme='light'] .task-delete-button {
+  border-color: rgba(100, 116, 139, 0.28);
+  background: linear-gradient(180deg, #ffffff, #f1f5f9);
+  color: #1e293b;
+}
+
+html[data-theme='light'] .primary-action:hover,
+html[data-theme='light'] .secondary-action:hover,
+html[data-theme='light'] .card-actions button:hover,
+html[data-theme='light'] .form-heading button:hover,
+html[data-theme='light'] .button-grid button:hover,
+html[data-theme='light'] .dev-tool-button:hover,
+html[data-theme='light'] .advanced-tools-toggle:hover,
+html[data-theme='light'] .refresh-git-button:hover,
+html[data-theme='light'] .task-delete-button:hover,
+html[data-theme='light'] .quick-action-card:hover,
+html[data-theme='light'] .favorite-project-actions button:hover {
+  border-color: rgba(2, 132, 199, 0.45);
+  background: linear-gradient(180deg, #f8fafc, #eaf6ff);
+}
+
+html[data-theme='light'] .primary-action:hover {
+  background: linear-gradient(180deg, #0284c7, #0369a1);
+}
+
+html[data-theme='light'] .filter-tabs button {
+  color: #334155;
+}
+
+html[data-theme='light'] .filter-tabs button.active,
+html[data-theme='light'] .theme-toggle-action button.active {
+  background: #dbeafe;
+  color: #0f4f7a;
+}
+
+html[data-theme='light'] .theme-toggle-action button {
+  color: #334155;
+}
+
+html[data-theme='light'] .theme-toggle-action button:hover {
+  color: #0b1220;
+}
+
+html[data-theme='light'] .version-badge,
+html[data-theme='light'] .recent-activity-count,
+html[data-theme='light'] .quick-actions-heading > span,
+html[data-theme='light'] .project-section-heading span,
+html[data-theme='light'] .notes-save-state,
+html[data-theme='light'] .publish-state {
+  border-color: rgba(2, 132, 199, 0.28);
+  background: #e0f2fe;
+  color: #075985;
+}
+
+html[data-theme='light'] .project-icon,
+html[data-theme='light'] .quick-action-icon,
+html[data-theme='light'] .icon-preview {
+  border-color: rgba(2, 132, 199, 0.28);
+  background: #e0f2fe;
+  color: #075985;
+}
+
+html[data-theme='light'] .project-icon.custom,
+html[data-theme='light'] .card-actions button.favorite-button.active,
+html[data-theme='light'] .favorites-menu-heading strong {
+  border-color: rgba(217, 119, 6, 0.38);
+  background: #fef3c7;
+  color: #78350f;
+}
+
+html[data-theme='light'] .favorites-toggle {
+  border-color: rgba(217, 119, 6, 0.38);
+  background: #fffbeb;
+  color: #78350f;
+}
+
+html[data-theme='light'] .favorites-toggle:hover {
+  background: #fef3c7;
+}
+
+html[data-theme='light'] .project-meta dd,
+html[data-theme='light'] .details-list dd,
+html[data-theme='light'] .git-summary-list dd,
+html[data-theme='light'] .git-summary-message,
+html[data-theme='light'] .task-profile-copy code,
+html[data-theme='light'] .smart-start-meta dd,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path code,
+html[data-theme='light'] .commit-command-preview pre,
+html[data-theme='light'] .commit-output pre,
+html[data-theme='light'] .log-line span,
+html[data-theme='light'] .log-info span,
+html[data-theme='light'] .log-output span,
+html[data-theme='light'] .publish-result p,
+html[data-theme='light'] .publish-result pre {
+  color: #1e293b;
+}
+
+html[data-theme='light'] .status-stopped {
+  border-color: rgba(71, 85, 105, 0.32);
+  background: #f1f5f9;
+  color: #334155;
+}
+
+html[data-theme='light'] .status-running,
+html[data-theme='light'] .notes-save-state.state-saved,
+html[data-theme='light'] .publish-state.state-success,
+html[data-theme='light'] .button-grid button.run-action {
+  border-color: rgba(5, 150, 105, 0.36);
+  background: #dcfce7;
+  color: #065f46;
+}
+
+html[data-theme='light'] .status-error,
+html[data-theme='light'] .notes-save-state.state-error,
+html[data-theme='light'] .publish-state.state-failed,
+html[data-theme='light'] .danger-action,
+html[data-theme='light'] .button-grid button.stop-action {
+  border-color: rgba(220, 38, 38, 0.32);
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+html[data-theme='light'] .tone-cyan {
+  background: #dbeafe;
+  color: #0f4f7a;
+}
+
+html[data-theme='light'] .tone-violet {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+html[data-theme='light'] .tone-emerald {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+html[data-theme='light'] .safety-note {
+  border-color: rgba(217, 119, 6, 0.36);
+  background: #fffbeb;
+  color: #78350f;
+}
+
+html[data-theme='light'] .notice-bar {
+  border-color: rgba(100, 116, 139, 0.24);
+  background: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+}
+
+html[data-theme='light'] .notice-bar[data-success='true'] {
+  border-color: rgba(5, 150, 105, 0.32);
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+html[data-theme='light'] .modal-backdrop {
+  background: rgba(226, 232, 240, 0.82);
+}
+
+/* Final light-mode polish: higher contrast, cleaner surfaces, and clearer controls. */
+html[data-theme='light'] {
+  color: #24272e;
+  background: #eef2f6;
+}
+
+html[data-theme='light'] body {
+  background:
+    linear-gradient(180deg, #f8fafc 0%, #eef2f6 46%, #e7edf4 100%),
+    #eef2f6;
+  color: #24272e;
+}
+
+html[data-theme='light'] .app-shell {
+  color: #24272e;
+}
+
+html[data-theme='light'] h1,
+html[data-theme='light'] h2,
+html[data-theme='light'] h3,
+html[data-theme='light'] .quick-actions-heading h2,
+html[data-theme='light'] .smart-start-heading h2,
+html[data-theme='light'] .recent-activity-panel .section-heading h2,
+html[data-theme='light'] .project-section-heading h2,
+html[data-theme='light'] .card-header h2,
+html[data-theme='light'] .details-heading h2,
+html[data-theme='light'] .section-heading h3,
+html[data-theme='light'] .settings-section-heading h3,
+html[data-theme='light'] .settings-row h3,
+html[data-theme='light'] .wizard-heading h2,
+html[data-theme='light'] .wizard-steps strong,
+html[data-theme='light'] .about-panel summary strong,
+html[data-theme='light'] .roadmap-panel summary strong,
+html[data-theme='light'] .quick-action-copy strong,
+html[data-theme='light'] .smart-start-project strong,
+html[data-theme='light'] .task-profile-copy strong,
+html[data-theme='light'] .settings-toggle strong,
+html[data-theme='light'] .settings-meta-list dd,
+html[data-theme='light'] .commit-output strong,
+html[data-theme='light'] .favorite-project-copy strong,
+html[data-theme='light'] .metric strong,
+html[data-theme='light'] .publish-latest strong,
+html[data-theme='light'] .publish-result strong,
+html[data-theme='light'] .work-time-grid strong {
+  color: #22252c;
+}
+
+html[data-theme='light'] .tagline,
+html[data-theme='light'] .quick-action-copy small,
+html[data-theme='light'] .insight-card p,
+html[data-theme='light'] .smart-start-empty p,
+html[data-theme='light'] .recent-activity-empty,
+html[data-theme='light'] .favorites-empty,
+html[data-theme='light'] .empty-state,
+html[data-theme='light'] .empty-detail,
+html[data-theme='light'] .settings-helper,
+html[data-theme='light'] .settings-toggle small,
+html[data-theme='light'] .settings-row p:last-child,
+html[data-theme='light'] .about-panel p:last-child,
+html[data-theme='light'] .favorite-project-copy span,
+html[data-theme='light'] .metric span,
+html[data-theme='light'] .project-icon-editor label,
+html[data-theme='light'] .settings-field,
+html[data-theme='light'] .project-form label,
+html[data-theme='light'] .commit-modal label,
+html[data-theme='light'] .work-time-grid span,
+html[data-theme='light'] .publish-latest span,
+html[data-theme='light'] .publish-latest time,
+html[data-theme='light'] .log-line time,
+html[data-theme='light'] .empty-log,
+html[data-theme='light'] .project-meta dt,
+html[data-theme='light'] .details-list dt,
+html[data-theme='light'] .git-summary-list dt,
+html[data-theme='light'] .smart-start-meta dt,
+html[data-theme='light'] .commit-path span,
+html[data-theme='light'] .commit-command-preview span,
+html[data-theme='light'] .settings-meta-list dt {
+  color: #3b404a;
+}
+
+html[data-theme='light'] .quick-actions-panel,
+html[data-theme='light'] .recent-activity-panel,
+html[data-theme='light'] .details-panel,
+html[data-theme='light'] .project-form,
+html[data-theme='light'] .commit-modal,
+html[data-theme='light'] .wizard-modal,
+html[data-theme='light'] .settings-modal,
+html[data-theme='light'] .project-card {
+  border-color: rgba(79, 86, 99, 0.24);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f9fafb 100%),
+    #ffffff;
+  box-shadow:
+    0 16px 36px rgba(31, 41, 55, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+}
+
+html[data-theme='light'] .project-card.selected {
+  border-color: #0b84c6;
+  box-shadow:
+    0 18px 40px rgba(31, 41, 55, 0.13),
+    0 0 0 2px rgba(14, 132, 198, 0.2);
+}
+
+html[data-theme='light'] .metric,
+html[data-theme='light'] .settings-section,
+html[data-theme='light'] .settings-row,
+html[data-theme='light'] .about-panel,
+html[data-theme='light'] .roadmap-panel,
+html[data-theme='light'] .details-list,
+html[data-theme='light'] .panel-section,
+html[data-theme='light'] .task-profile-item,
+html[data-theme='light'] .settings-toggle,
+html[data-theme='light'] .settings-meta-list div,
+html[data-theme='light'] .smart-start-meta div,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path,
+html[data-theme='light'] .commit-command-preview,
+html[data-theme='light'] .commit-output,
+html[data-theme='light'] .quick-action-card,
+html[data-theme='light'] .favorite-project-row,
+html[data-theme='light'] .favorite-project-actions button,
+html[data-theme='light'] .wizard-steps li,
+html[data-theme='light'] .work-time-grid div,
+html[data-theme='light'] .publish-latest,
+html[data-theme='light'] .publish-result,
+html[data-theme='light'] .form-task-profiles {
+  border-color: rgba(79, 86, 99, 0.22);
+  background: #ffffff;
+}
+
+html[data-theme='light'] .metric-primary,
+html[data-theme='light'] .smart-start-card {
+  border-color: rgba(14, 132, 198, 0.34);
+  background:
+    linear-gradient(180deg, #f1f8ff 0%, #ffffff 100%),
+    #ffffff;
+  box-shadow:
+    0 14px 32px rgba(14, 116, 144, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+}
+
+html[data-theme='light'] .search-box,
+html[data-theme='light'] .filter-tabs,
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu,
+html[data-theme='light'] .button-grid,
+html[data-theme='light'] .advanced-tools-panel,
+html[data-theme='light'] .theme-toggle-action {
+  border-color: rgba(79, 86, 99, 0.3);
+  background: #ffffff;
+  color: #24272e;
+  box-shadow: 0 8px 18px rgba(31, 41, 55, 0.06);
+}
+
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea,
+html[data-theme='light'] .search-box input,
+html[data-theme='light'] .settings-field input,
+html[data-theme='light'] .settings-field select,
+html[data-theme='light'] .project-icon-editor input,
+html[data-theme='light'] .notes-section textarea,
+html[data-theme='light'] .project-form input,
+html[data-theme='light'] .project-form select,
+html[data-theme='light'] .commit-modal input {
+  border-color: rgba(79, 86, 99, 0.42);
+  background: #ffffff;
+  color: #24272e;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #6b7280;
+}
+
+html[data-theme='light'] input:focus,
+html[data-theme='light'] select:focus,
+html[data-theme='light'] textarea:focus,
+html[data-theme='light'] .settings-field input:focus,
+html[data-theme='light'] .settings-field select:focus,
+html[data-theme='light'] .project-icon-editor input:focus,
+html[data-theme='light'] .project-notes-input:focus,
+html[data-theme='light'] .project-form input:focus,
+html[data-theme='light'] .project-form select:focus,
+html[data-theme='light'] .commit-modal input:focus {
+  border-color: #0b84c6;
+  box-shadow: 0 0 0 3px rgba(14, 132, 198, 0.18);
+}
+
+html[data-theme='light'] .filter-tabs {
+  background: #ffffff;
+}
+
+html[data-theme='light'] .filter-tabs button {
+  background: #ffffff;
+  color: #30343b;
+  font-weight: 800;
+}
+
+html[data-theme='light'] .filter-tabs button.active {
+  background: #0b84c6;
+  color: #ffffff;
+}
+
+html[data-theme='light'] .filter-tabs button:hover {
+  background: #eaf6ff;
+  color: #22252c;
+}
+
+html[data-theme='light'] .filter-tabs button.active:hover {
+  background: #076fa8;
+  color: #ffffff;
+}
+
+html[data-theme='light'] .primary-action {
+  border-color: #076fa8;
+  background: linear-gradient(180deg, #0b9ee8 0%, #0b84c6 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(11, 132, 198, 0.24);
+}
+
+html[data-theme='light'] .secondary-action,
+html[data-theme='light'] .card-actions button,
+html[data-theme='light'] .form-heading button,
+html[data-theme='light'] .button-grid button,
+html[data-theme='light'] .dev-tool-button,
+html[data-theme='light'] .advanced-tools-toggle,
+html[data-theme='light'] .refresh-git-button,
+html[data-theme='light'] .task-delete-button {
+  border-color: rgba(79, 86, 99, 0.32);
+  background: linear-gradient(180deg, #ffffff 0%, #f3f5f8 100%);
+  color: #30343b;
+}
+
+html[data-theme='light'] .primary-action:hover {
+  border-color: #055f91;
+  background: linear-gradient(180deg, #0b84c6 0%, #076fa8 100%);
+}
+
+html[data-theme='light'] .secondary-action:hover,
+html[data-theme='light'] .card-actions button:hover,
+html[data-theme='light'] .form-heading button:hover,
+html[data-theme='light'] .button-grid button:hover,
+html[data-theme='light'] .dev-tool-button:hover,
+html[data-theme='light'] .advanced-tools-toggle:hover,
+html[data-theme='light'] .refresh-git-button:hover,
+html[data-theme='light'] .task-delete-button:hover,
+html[data-theme='light'] .quick-action-card:hover,
+html[data-theme='light'] .favorite-project-actions button:hover {
+  border-color: rgba(11, 132, 198, 0.48);
+  background: linear-gradient(180deg, #ffffff 0%, #eaf6ff 100%);
+  color: #22252c;
+}
+
+html[data-theme='light'] .theme-toggle-action button {
+  color: #30343b;
+}
+
+html[data-theme='light'] .theme-toggle-action button.active {
+  background: #eaf6ff;
+  color: #075985;
+}
+
+html[data-theme='light'] .version-badge,
+html[data-theme='light'] .recent-activity-count,
+html[data-theme='light'] .quick-actions-heading > span,
+html[data-theme='light'] .project-section-heading span,
+html[data-theme='light'] .notes-save-state,
+html[data-theme='light'] .publish-state,
+html[data-theme='light'] .project-icon,
+html[data-theme='light'] .quick-action-icon,
+html[data-theme='light'] .icon-preview {
+  border-color: rgba(11, 132, 198, 0.28);
+  background: #eaf6ff;
+  color: #075985;
+}
+
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu-heading strong,
+html[data-theme='light'] .project-icon.custom,
+html[data-theme='light'] .card-actions button.favorite-button.active {
+  border-color: rgba(161, 98, 7, 0.28);
+  background: #fff7e6;
+  color: #5f420c;
+}
+
+html[data-theme='light'] .favorites-toggle:hover {
+  background: #ffefd0;
+}
+
+html[data-theme='light'] .project-meta dd,
+html[data-theme='light'] .details-list dd,
+html[data-theme='light'] .git-summary-list dd,
+html[data-theme='light'] .git-summary-message,
+html[data-theme='light'] .task-profile-copy code,
+html[data-theme='light'] .smart-start-meta dd,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path code,
+html[data-theme='light'] .commit-command-preview pre,
+html[data-theme='light'] .commit-output pre,
+html[data-theme='light'] .log-line span,
+html[data-theme='light'] .log-info span,
+html[data-theme='light'] .log-output span,
+html[data-theme='light'] .publish-result p,
+html[data-theme='light'] .publish-result pre {
+  color: #30343b;
+}
+
+html[data-theme='light'] .safety-note,
+html[data-theme='light'] .notice-bar {
+  border-color: rgba(79, 86, 99, 0.24);
+  background: #f7f8fb;
+  color: #30343b;
+}
+
+html[data-theme='light'] .notice-bar[data-success='true'] {
+  border-color: rgba(11, 132, 198, 0.24);
+  background: #f0f7fc;
+  color: #27556f;
+}
+
+html[data-theme='light'] .status-stopped {
+  border-color: rgba(79, 86, 99, 0.32);
+  background: #f3f5f8;
+  color: #30343b;
+}
+
+html[data-theme='light'] .status-running,
+html[data-theme='light'] .notes-save-state.state-saved,
+html[data-theme='light'] .publish-state.state-success,
+html[data-theme='light'] .button-grid button.run-action {
+  border-color: rgba(4, 120, 87, 0.3);
+  background: #e7f8ef;
+  color: #1f6b50;
+}
+
+html[data-theme='light'] .status-error,
+html[data-theme='light'] .notes-save-state.state-error,
+html[data-theme='light'] .publish-state.state-failed,
+html[data-theme='light'] .danger-action,
+html[data-theme='light'] .button-grid button.stop-action {
+  border-color: rgba(185, 28, 28, 0.3);
+  background: #fff0f0;
+  color: #8f1d1d;
+}
+
+html[data-theme='light'] .modal-backdrop {
+  background: rgba(231, 237, 244, 0.84);
+}
+
+/* Public-quality Light Mode pass. Keep all changes scoped to the light theme. */
+html[data-theme='light'] {
+  color: #374151;
+  background: #f5f7fa;
+  color-scheme: light;
+}
+
+html[data-theme='light'] body {
+  background:
+    linear-gradient(180deg, #fbfcfe 0%, #f5f7fa 42%, #eef2f7 100%),
+    #f5f7fa;
+  color: #374151;
+}
+
+html[data-theme='light'] .app-shell {
+  color: #374151;
+}
+
+html[data-theme='light'] h1,
+html[data-theme='light'] h2,
+html[data-theme='light'] h3,
+html[data-theme='light'] .quick-actions-heading h2,
+html[data-theme='light'] .smart-start-heading h2,
+html[data-theme='light'] .recent-activity-panel .section-heading h2,
+html[data-theme='light'] .project-section-heading h2,
+html[data-theme='light'] .card-header h2,
+html[data-theme='light'] .details-heading h2,
+html[data-theme='light'] .section-heading h3,
+html[data-theme='light'] .settings-section-heading h3,
+html[data-theme='light'] .settings-row h3,
+html[data-theme='light'] .wizard-heading h2,
+html[data-theme='light'] .wizard-steps strong,
+html[data-theme='light'] .about-panel summary strong,
+html[data-theme='light'] .roadmap-panel summary strong,
+html[data-theme='light'] .quick-action-copy strong,
+html[data-theme='light'] .smart-start-project strong,
+html[data-theme='light'] .task-profile-copy strong,
+html[data-theme='light'] .settings-toggle strong,
+html[data-theme='light'] .settings-meta-list dd,
+html[data-theme='light'] .commit-output strong,
+html[data-theme='light'] .favorite-project-copy strong,
+html[data-theme='light'] .metric strong,
+html[data-theme='light'] .publish-latest strong,
+html[data-theme='light'] .publish-result strong,
+html[data-theme='light'] .work-time-grid strong {
+  color: #111827;
+}
+
+html[data-theme='light'] .project-meta dd,
+html[data-theme='light'] .details-list dd,
+html[data-theme='light'] .git-summary-list dd,
+html[data-theme='light'] .git-summary-message,
+html[data-theme='light'] .task-profile-copy code,
+html[data-theme='light'] .smart-start-meta dd,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path code,
+html[data-theme='light'] .commit-command-preview pre,
+html[data-theme='light'] .commit-output pre,
+html[data-theme='light'] .log-line span,
+html[data-theme='light'] .log-info span,
+html[data-theme='light'] .log-output span,
+html[data-theme='light'] .publish-result p,
+html[data-theme='light'] .publish-result pre,
+html[data-theme='light'] .search-box input,
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea {
+  color: #374151;
+}
+
+html[data-theme='light'] .tagline,
+html[data-theme='light'] .quick-action-copy small,
+html[data-theme='light'] .insight-card p,
+html[data-theme='light'] .smart-start-empty p,
+html[data-theme='light'] .recent-activity-empty,
+html[data-theme='light'] .favorites-empty,
+html[data-theme='light'] .empty-state,
+html[data-theme='light'] .empty-detail,
+html[data-theme='light'] .settings-helper,
+html[data-theme='light'] .settings-toggle small,
+html[data-theme='light'] .settings-row p:last-child,
+html[data-theme='light'] .about-panel p:last-child,
+html[data-theme='light'] .favorite-project-copy span,
+html[data-theme='light'] .metric span,
+html[data-theme='light'] .project-icon-editor label,
+html[data-theme='light'] .settings-field,
+html[data-theme='light'] .project-form label,
+html[data-theme='light'] .commit-modal label,
+html[data-theme='light'] .work-time-grid span,
+html[data-theme='light'] .publish-latest span,
+html[data-theme='light'] .publish-latest time,
+html[data-theme='light'] .log-line time,
+html[data-theme='light'] .empty-log,
+html[data-theme='light'] .project-meta dt,
+html[data-theme='light'] .details-list dt,
+html[data-theme='light'] .git-summary-list dt,
+html[data-theme='light'] .smart-start-meta dt,
+html[data-theme='light'] .commit-path span,
+html[data-theme='light'] .commit-command-preview span,
+html[data-theme='light'] .settings-meta-list dt {
+  color: #6b7280;
+}
+
+html[data-theme='light'] .eyebrow,
+html[data-theme='light'] .recent-activity-item time {
+  color: #0b84c6;
+}
+
+html[data-theme='light'] .quick-actions-panel,
+html[data-theme='light'] .recent-activity-panel,
+html[data-theme='light'] .details-panel,
+html[data-theme='light'] .project-form,
+html[data-theme='light'] .commit-modal,
+html[data-theme='light'] .wizard-modal,
+html[data-theme='light'] .settings-modal,
+html[data-theme='light'] .project-card {
+  border-color: #d1d5db;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fdfdfd 100%),
+    #ffffff;
+  box-shadow:
+    0 16px 34px rgba(17, 24, 39, 0.09),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+}
+
+html[data-theme='light'] .project-card.selected {
+  border-color: #0b84c6;
+  box-shadow:
+    0 18px 38px rgba(17, 24, 39, 0.11),
+    0 0 0 2px rgba(11, 132, 198, 0.18);
+}
+
+html[data-theme='light'] .metric,
+html[data-theme='light'] .settings-section,
+html[data-theme='light'] .settings-row,
+html[data-theme='light'] .about-panel,
+html[data-theme='light'] .roadmap-panel,
+html[data-theme='light'] .details-list,
+html[data-theme='light'] .panel-section,
+html[data-theme='light'] .task-profile-item,
+html[data-theme='light'] .settings-toggle,
+html[data-theme='light'] .settings-meta-list div,
+html[data-theme='light'] .smart-start-meta div,
+html[data-theme='light'] .recent-activity-item,
+html[data-theme='light'] .roadmap-list li,
+html[data-theme='light'] .commit-path,
+html[data-theme='light'] .commit-command-preview,
+html[data-theme='light'] .commit-output,
+html[data-theme='light'] .quick-action-card,
+html[data-theme='light'] .favorite-project-row,
+html[data-theme='light'] .favorite-project-actions button,
+html[data-theme='light'] .wizard-steps li,
+html[data-theme='light'] .work-time-grid div,
+html[data-theme='light'] .publish-latest,
+html[data-theme='light'] .publish-result,
+html[data-theme='light'] .form-task-profiles {
+  border-color: #d6dbe3;
+  background: #ffffff;
+}
+
+html[data-theme='light'] .metric-primary,
+html[data-theme='light'] .smart-start-card {
+  border-color: rgba(11, 132, 198, 0.28);
+  background:
+    linear-gradient(180deg, #f0f8ff 0%, #ffffff 100%),
+    #ffffff;
+  box-shadow:
+    0 14px 30px rgba(11, 132, 198, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+}
+
+html[data-theme='light'] .search-box,
+html[data-theme='light'] .filter-tabs,
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu,
+html[data-theme='light'] .button-grid,
+html[data-theme='light'] .advanced-tools-panel,
+html[data-theme='light'] .theme-toggle-action {
+  border-color: #c9d1dc;
+  background: #ffffff;
+  color: #374151;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.05);
+}
+
+html[data-theme='light'] input,
+html[data-theme='light'] select,
+html[data-theme='light'] textarea,
+html[data-theme='light'] .settings-field input,
+html[data-theme='light'] .settings-field select,
+html[data-theme='light'] .project-icon-editor input,
+html[data-theme='light'] .notes-section textarea,
+html[data-theme='light'] .project-form input,
+html[data-theme='light'] .project-form select,
+html[data-theme='light'] .commit-modal input {
+  border-color: #b8c1cc;
+  background: #ffffff;
+  color: #374151;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #6b7280;
+}
+
+html[data-theme='light'] input:focus,
+html[data-theme='light'] select:focus,
+html[data-theme='light'] textarea:focus,
+html[data-theme='light'] .settings-field input:focus,
+html[data-theme='light'] .settings-field select:focus,
+html[data-theme='light'] .project-icon-editor input:focus,
+html[data-theme='light'] .project-notes-input:focus,
+html[data-theme='light'] .project-form input:focus,
+html[data-theme='light'] .project-form select:focus,
+html[data-theme='light'] .commit-modal input:focus {
+  border-color: #0b84c6;
+  box-shadow: 0 0 0 3px rgba(11, 132, 198, 0.18);
+}
+
+html[data-theme='light'] .filter-tabs {
+  background: #ffffff;
+}
+
+html[data-theme='light'] .filter-tabs button {
+  background: #ffffff;
+  color: #374151;
+  font-weight: 800;
+}
+
+html[data-theme='light'] .filter-tabs button.active {
+  background: #0b84c6;
+  color: #ffffff;
+}
+
+html[data-theme='light'] .filter-tabs button:hover {
+  background: #eef7ff;
+  color: #111827;
+}
+
+html[data-theme='light'] .filter-tabs button.active:hover {
+  background: #076fa8;
+  color: #ffffff;
+}
+
+html[data-theme='light'] .primary-action {
+  border-color: #076fa8;
+  background: linear-gradient(180deg, #0b9ee8 0%, #0b84c6 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(11, 132, 198, 0.22);
+}
+
+html[data-theme='light'] .secondary-action,
+html[data-theme='light'] .card-actions button,
+html[data-theme='light'] .form-heading button,
+html[data-theme='light'] .button-grid button,
+html[data-theme='light'] .dev-tool-button,
+html[data-theme='light'] .advanced-tools-toggle,
+html[data-theme='light'] .refresh-git-button,
+html[data-theme='light'] .task-delete-button {
+  border-color: #c9d1dc;
+  background: linear-gradient(180deg, #ffffff 0%, #f3f5f8 100%);
+  color: #374151;
+}
+
+html[data-theme='light'] .primary-action:hover {
+  border-color: #055f91;
+  background: linear-gradient(180deg, #0b84c6 0%, #076fa8 100%);
+}
+
+html[data-theme='light'] .secondary-action:hover,
+html[data-theme='light'] .card-actions button:hover,
+html[data-theme='light'] .form-heading button:hover,
+html[data-theme='light'] .button-grid button:hover,
+html[data-theme='light'] .dev-tool-button:hover,
+html[data-theme='light'] .advanced-tools-toggle:hover,
+html[data-theme='light'] .refresh-git-button:hover,
+html[data-theme='light'] .task-delete-button:hover,
+html[data-theme='light'] .quick-action-card:hover,
+html[data-theme='light'] .favorite-project-actions button:hover {
+  border-color: rgba(11, 132, 198, 0.48);
+  background: linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);
+  color: #111827;
+}
+
+html[data-theme='light'] .theme-toggle-action button {
+  color: #374151;
+}
+
+html[data-theme='light'] .theme-toggle-action button.active {
+  background: #e8f4fc;
+  color: #075985;
+}
+
+html[data-theme='light'] .version-badge,
+html[data-theme='light'] .recent-activity-count,
+html[data-theme='light'] .quick-actions-heading > span,
+html[data-theme='light'] .project-section-heading span,
+html[data-theme='light'] .notes-save-state,
+html[data-theme='light'] .publish-state,
+html[data-theme='light'] .project-icon,
+html[data-theme='light'] .quick-action-icon,
+html[data-theme='light'] .icon-preview {
+  border-color: rgba(11, 132, 198, 0.26);
+  background: #e8f4fc;
+  color: #075985;
+}
+
+html[data-theme='light'] .favorites-toggle,
+html[data-theme='light'] .favorites-menu-heading strong,
+html[data-theme='light'] .project-icon.custom,
+html[data-theme='light'] .card-actions button.favorite-button.active {
+  border-color: rgba(161, 98, 7, 0.24);
+  background: #fff8e8;
+  color: #6b4a0f;
+}
+
+html[data-theme='light'] .favorites-toggle:hover {
+  background: #fff0cf;
+}
+
+html[data-theme='light'] .safety-note,
+html[data-theme='light'] .notice-bar {
+  border-color: #d6dbe3;
+  background: #f9fafb;
+  color: #374151;
+}
+
+html[data-theme='light'] .notice-bar[data-success='true'] {
+  border-color: rgba(11, 132, 198, 0.24);
+  background: #f1f8fd;
+  color: #25617f;
+}
+
+html[data-theme='light'] .status-stopped {
+  border-color: #c9d1dc;
+  background: #f3f5f8;
+  color: #374151;
+}
+
+html[data-theme='light'] .status-running,
+html[data-theme='light'] .notes-save-state.state-saved,
+html[data-theme='light'] .publish-state.state-success,
+html[data-theme='light'] .button-grid button.run-action {
+  border-color: rgba(4, 120, 87, 0.28);
+  background: #e8f7ef;
+  color: #1f6b50;
+}
+
+html[data-theme='light'] .status-error,
+html[data-theme='light'] .notes-save-state.state-error,
+html[data-theme='light'] .publish-state.state-failed,
+html[data-theme='light'] .danger-action,
+html[data-theme='light'] .button-grid button.stop-action {
+  border-color: rgba(185, 28, 28, 0.28);
+  background: #fff1f1;
+  color: #8f1d1d;
+}
+
+html[data-theme='light'] .modal-backdrop {
+  background: rgba(245, 247, 250, 0.84);
+}
+
+/* Light Mode specificity fixes for high-use controls. */
+html[data-theme='light'] .quick-actions-panel .quick-action-card {
+  border-color: #d6dbe3 !important;
+  background: #ffffff !important;
+  color: #374151;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+html[data-theme='light'] .quick-actions-panel .quick-action-card:hover {
+  border-color: rgba(11, 132, 198, 0.48) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #eef7ff 100%) !important;
+  color: #111827;
+}
+
+html[data-theme='light'] .search-box input,
+html[data-theme='light'] .settings-field input,
+html[data-theme='light'] .settings-field select,
+html[data-theme='light'] .notes-section textarea,
+html[data-theme='light'] .project-notes-input {
+  border-color: #b8c1cc;
+  background: #ffffff;
+  color: #374151;
+}
+
+html[data-theme='light'] .search-box input:focus,
+html[data-theme='light'] .settings-field input:focus,
+html[data-theme='light'] .settings-field select:focus,
+html[data-theme='light'] .notes-section textarea:focus,
+html[data-theme='light'] .project-notes-input:focus {
+  border-color: #0b84c6;
+  box-shadow: 0 0 0 3px rgba(11, 132, 198, 0.18);
+}
+
+.command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: min(9vh, 72px) 18px 24px;
+  background: rgba(3, 7, 18, 0.74);
+  backdrop-filter: blur(16px);
+}
+
+.command-palette {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.98), rgba(6, 12, 24, 0.99)),
+    #0b1525;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+}
+
+.command-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(2, 6, 23, 0.22);
+  color: #67e8f9;
+}
+
+.command-palette-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f8fbff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.command-palette-search input::placeholder {
+  color: #7890aa;
+}
+
+.command-palette-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px 10px;
+}
+
+.command-palette-heading h2 {
+  color: #f8fbff;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.command-palette-heading span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.26);
+  color: #bae6fd;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.command-palette-list {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 10px 12px;
+}
+
+.command-palette-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #dce8f7;
+  cursor: pointer;
+  text-align: left;
+}
+
+.command-palette-item:hover,
+.command-palette-item.active {
+  border-color: rgba(34, 211, 238, 0.28);
+  background: rgba(8, 47, 73, 0.32);
+}
+
+.command-palette-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.command-palette-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 47, 73, 0.28);
+  color: #67e8f9;
+}
+
+.command-palette-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.command-palette-copy strong {
+  color: #f8fbff;
+  font-size: 0.92rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette-copy small {
+  color: #91a4bb;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #aebed2;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.command-palette-empty {
+  margin: 0;
+  padding: 28px 10px 34px;
+  color: #91a4bb;
+  text-align: center;
+  font-weight: 800;
+}
+
+html[data-theme='light'] .command-palette-backdrop {
+  background: rgba(245, 247, 250, 0.84);
+}
+
+html[data-theme='light'] .command-palette {
+  border-color: #d1d5db;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%),
+    #ffffff;
+  box-shadow: 0 28px 78px rgba(17, 24, 39, 0.16);
+}
+
+html[data-theme='light'] .command-palette-search {
+  border-bottom-color: #d6dbe3;
+  background: #ffffff;
+  color: #0b84c6;
+}
+
+html[data-theme='light'] .command-palette-search input {
+  color: #111827;
+}
+
+html[data-theme='light'] .command-palette-search input::placeholder {
+  color: #6b7280;
+}
+
+html[data-theme='light'] .command-palette-heading h2,
+html[data-theme='light'] .command-palette-copy strong {
+  color: #111827;
+}
+
+html[data-theme='light'] .command-palette-heading span,
+html[data-theme='light'] .command-palette-icon {
+  border-color: rgba(11, 132, 198, 0.26);
+  background: #e8f4fc;
+  color: #075985;
+}
+
+html[data-theme='light'] .command-palette-item {
+  color: #374151;
+}
+
+html[data-theme='light'] .command-palette-item:hover,
+html[data-theme='light'] .command-palette-item.active {
+  border-color: rgba(11, 132, 198, 0.44);
+  background: #eef7ff;
+}
+
+html[data-theme='light'] .command-palette-copy small,
+html[data-theme='light'] .command-palette-empty {
+  color: #6b7280;
+}
+
+html[data-theme='light'] .command-palette-group {
+  border-color: #d6dbe3;
+  background: #ffffff;
+  color: #374151;
+}
+
+@media (max-width: 640px) {
+  .command-palette-backdrop {
+    padding: 14px;
+  }
+
+  .command-palette {
+    width: 100%;
+    max-height: calc(100vh - 28px);
+  }
+
+  .command-palette-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .command-palette-group {
+    grid-column: 2;
+    justify-self: start;
   }
 }
