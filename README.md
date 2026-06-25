@@ -1,16 +1,18 @@
 # BuilderOS
 
-A focused desktop command center for solo developers who want to launch, organize, and return to their projects faster.
+A developer workspace built for solo builders.
 
 ---
 
 ## Screenshots
 
-> Screenshots coming soon.
+| Dashboard (Dark) | Command Palette |
+| --- | --- |
+| ![BuilderOS dashboard in dark mode](docs/screenshots/dashboard-dark.png) | ![BuilderOS command palette](docs/screenshots/command-palette.png) |
 
-| Dashboard | Command Palette | Light Mode |
-| --- | --- | --- |
-| `docs/screenshots/dashboard.png` | `docs/screenshots/command-palette.png` | `docs/screenshots/light-mode.png` |
+| Settings | Light Mode |
+| --- | --- |
+| ![BuilderOS settings panel](docs/screenshots/settings.png) | ![BuilderOS light mode](docs/screenshots/light-mode.png) |
 
 ---
 
@@ -18,15 +20,15 @@ A focused desktop command center for solo developers who want to launch, organiz
 
 ### Project Management
 
-Keep local projects in one place with names, paths, project types, task profiles, notes, launch history, and favorite status.
+Keep local projects in one place with paths, project types, task profiles, notes, history, and favorites.
 
 ### Quick Actions
 
-Run common actions from the dashboard, including adding a project, opening a workspace folder, opening PowerShell, opening a terminal, and jumping into notes.
+Run common actions from the dashboard: add a project, open a folder, open PowerShell, launch a terminal, or jump into notes.
 
 ### Smart Start
 
-Resume the project you were last working on without searching through folders or remembering what was open yesterday.
+Resume the project you were last working on without searching through folders.
 
 ### Command Palette
 
@@ -43,27 +45,27 @@ Available commands include:
 
 ### Favorites
 
-Pin important projects and access them quickly from the dashboard or command palette.
+Pin important projects and access them from the dashboard or command palette.
 
 ### Project Notes
 
-Store lightweight project notes directly in BuilderOS so context stays close to the workspace.
+Store lightweight notes beside each project.
 
 ### Work Time Tracker
 
-Track active work sessions and total time spent across your projects.
+Track active work sessions and total time across projects.
 
 ### Theme Toggle
 
-Switch between polished Dark and Light modes. Theme selection is saved locally and restored after restart.
+Switch between Dark and Light modes. Your choice is saved locally.
 
 ### Settings
 
-Manage app preferences, project defaults, data import/export, reset tools, and app metadata from a dedicated settings panel.
+Manage preferences, project defaults, data tools, and app metadata.
 
 ### Tutorial
 
-Use the first-launch tutorial to learn the basic flow: add a project, create task profiles, and start launching work from BuilderOS.
+Use the first-launch tutorial to add a project, create task profiles, and start launching work.
 
 ---
 
@@ -73,19 +75,11 @@ BuilderOS is currently built for Windows.
 
 ### Windows
 
-1. Download the latest `BuilderOS.exe` or `BuilderOS-<version>-portable.exe` from the release package.
-2. Move it to a stable folder, such as `C:\Tools\BuilderOS`.
-3. Run the app.
-4. If Windows SmartScreen appears, choose to run the app only if you trust the build source.
+Windows builds will be available from GitHub Releases.
 
 ### Portable Version
 
-The portable build does not require installation.
-
-1. Download `BuilderOS-<version>-portable.exe`.
-2. Place it anywhere on your machine.
-3. Launch it directly.
-4. Optionally create a desktop shortcut to the portable exe.
+The portable build will not require installation. Place it anywhere on your machine and launch it directly.
 
 BuilderOS stores local app data in Electron's user data folder for the app.
 
@@ -95,7 +89,7 @@ BuilderOS stores local app data in Electron's user data folder for the app.
 
 ### Add Project
 
-Click `Add project`, enter the project name and folder path, then save it. You can also add task profiles for common commands.
+Click `Add project`, enter a name and folder path, then save it. Add task profiles for common commands.
 
 ### Open Project
 
@@ -103,27 +97,24 @@ Select a project card to view details, notes, work time, Git context, logs, and 
 
 ### Use Ctrl + K
 
-Press `Ctrl + K` to open the Command Palette. Search for a project or command, then press `Enter` to run it.
+Press `Ctrl + K`, search for a project or command, then press `Enter`.
 
 ### Favorites
 
-Mark frequently used projects as favorites to keep them available from the dashboard and command palette.
+Mark frequent projects as favorites for quick access.
 
 ### Theme
 
-Use the header theme toggle or the Settings panel to switch between Dark and Light modes.
+Use the header toggle or Settings to switch themes.
 
 ---
 
 ## Roadmap
 
-- Deeper Git workflow automation
-- Richer project tutorials and onboarding
-- Screenshot and asset management
-- Project templates
-- Task history and command analytics
-- Backup and sync options
-- More keyboard-first workflows
+* Project templates
+* Git workflow automation
+* Backup & Sync
+* More keyboard-first workflows
 
 ---
 
@@ -131,7 +122,7 @@ Use the header theme toggle or the Settings panel to switch between Dark and Lig
 
 BuilderOS exists to help solo developers move faster with less friction.
 
-Personal projects often spread across folders, terminals, notes, commands, and half-remembered context. BuilderOS brings those daily actions into one focused desktop app so you can open the right project, run the right command, and continue where you left off.
+Personal projects often spread across folders, terminals, notes, commands, and half-remembered context. BuilderOS brings those daily actions into one focused desktop app.
 
 It was built for one purpose:
 
