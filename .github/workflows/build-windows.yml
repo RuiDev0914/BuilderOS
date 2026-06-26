@@ -1,0 +1,45 @@
+name: Build Windows
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows artifacts
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Package Windows app
+        run: npx electron-builder --win --publish never
+
+      - name: Create stable executable name
+        run: node scripts/copy-latest-portable.mjs
+
+      - name: Upload Windows executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuilderOS-windows
+          path: |
+            release/BuilderOS.exe
+            release/BuilderOS-*-portable.exe
+          if-no-files-found: error
