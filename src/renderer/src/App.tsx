@@ -132,7 +132,7 @@ const emptyProjectForm: ProjectFormState = {
 }
 
 const filters: FilterType[] = ['All', ...PROJECT_TYPES]
-const runStatuses: ProjectRunStatus[] = ['Running', 'Stopped', 'Error']
+const runStatuses: ProjectRunStatus[] = ['Starting', 'Running', 'Stopped', 'Error']
 
 const typeTone: Record<ProjectType, string> = {
   'Web app': 'tone-cyan',
@@ -148,8 +148,16 @@ const typeIcon: Record<ProjectType, string> = {
 
 const statusTone: Record<ProjectRunStatus, string> = {
   Stopped: 'status-stopped',
+  Starting: 'status-starting',
   Running: 'status-running',
   Error: 'status-error'
+}
+
+const statusLabel: Record<ProjectRunStatus, string> = {
+  Stopped: 'Stopped',
+  Starting: 'Starting...',
+  Running: 'Running',
+  Error: 'Error'
 }
 
 const roadmapItems = ['TODO System', 'Time Tracking', 'Project Notes', 'Git Integration', 'Screenshot Management']
@@ -585,7 +593,7 @@ export function App(): JSX.Element {
           [status]: counts[status] + 1
         }
       },
-      { Stopped: 0, Running: 0, Error: 0 }
+      { Stopped: 0, Starting: 0, Running: 0, Error: 0 }
     )
   }, [projects, statuses])
 
@@ -1399,6 +1407,7 @@ export function App(): JSX.Element {
   const renderProjectCard = (project: Project): JSX.Element => {
     const runStatus = projectStatusFor(project.id)
     const primaryTask = primaryTaskFor(project)
+    const projectIsStartingOrRunning = runStatus === 'Starting' || runStatus === 'Running'
 
     return (
       <article
@@ -1417,7 +1426,7 @@ export function App(): JSX.Element {
             <div>
               <div className="pill-row">
                 <span className={`type-pill ${typeTone[project.type]}`}>{project.type}</span>
-                <span className={`run-status ${statusTone[runStatus]}`}>{runStatus}</span>
+                <span className={`run-status ${statusTone[runStatus]}`}>{statusLabel[runStatus]}</span>
               </div>
               <h2>{project.name}</h2>
             </div>
@@ -1461,7 +1470,7 @@ export function App(): JSX.Element {
         </dl>
 
         <div className="button-grid">
-          {runStatus === 'Running' ? (
+          {projectIsStartingOrRunning ? (
             <button className="stop-action wide" type="button" title="Stop running task" onClick={() => stopProject(project)}>
               <Square size={16} />
               Stop
@@ -1986,7 +1995,7 @@ export function App(): JSX.Element {
           ))}
           {runStatuses.map((status) => (
             <div className="metric" key={status}>
-              <span>{status}</span>
+              <span>{statusLabel[status]}</span>
               <strong>{statusCounts[status]}</strong>
             </div>
           ))}
@@ -2034,7 +2043,7 @@ export function App(): JSX.Element {
                       <h2>{selectedProject.name}</h2>
                     </div>
                   </div>
-                  <span className={`run-status ${statusTone[selectedProjectStatus]}`}>{selectedProjectStatus}</span>
+                  <span className={`run-status ${statusTone[selectedProjectStatus]}`}>{statusLabel[selectedProjectStatus]}</span>
                 </div>
 
                 <dl className="details-list">
@@ -2131,7 +2140,7 @@ export function App(): JSX.Element {
                             className="dev-tool-button"
                             type="button"
                             title={`Run ${taskProfile.name}`}
-                            disabled={selectedProjectStatus === 'Running'}
+                            disabled={selectedProjectStatus === 'Starting' || selectedProjectStatus === 'Running'}
                             onClick={() => runProject(selectedProject, taskProfile)}
                           >
                             <Play size={15} />

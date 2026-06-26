@@ -7,6 +7,8 @@ import { request as httpsRequest } from 'node:https'
 import { APP_LEGACY_NAME, APP_NAME, APP_VERSION } from '@shared/app'
 import {
   DEFAULT_PROJECTS,
+  DEFAULT_TASK_PROFILE_ID,
+  DEFAULT_TASK_PROFILE_NAME,
   DesktopActionResult,
   isProjectType,
   migrateProjects,
@@ -42,6 +44,9 @@ const MAX_PROJECT_LOGS = 400
 const MAX_RECENT_ACTIVITIES = 20
 const QUICK_EXIT_MS = 8000
 const URL_REACHABILITY_TIMEOUT_MS = 1600
+const DEV_SERVER_START_TIMEOUT_MS = 30000
+const DEV_SERVER_POLL_INTERVAL_MS = 750
+const DEV_SERVER_POLL_REQUEST_TIMEOUT_MS = 850
 const GIT_ACTION_TIMEOUT_MS = 30000
 const MAX_DESKTOP_ACTION_OUTPUT = 16000
 const DEV_APP_ICON_PATH = join(process.cwd(), 'resources/dev-launch-pad.ico')
@@ -56,11 +61,13 @@ type RunningProject = {
   child: ChildProcessWithoutNullStreams
   stopping: boolean
   alreadyReachable: boolean
+  browserOpened: boolean
   completed: boolean
   fatalDetected: boolean
   fatalSignal?: string
   startedAt: number
   successDetected: boolean
+  waitingForUrl: boolean
 }
 
 type CommandResult = {
@@ -635,7 +642,7 @@ const findSignal = (signals: CommandSignal[], output: string): string | null => 
   return signals.find((signal) => signal.pattern.test(output))?.label ?? null
 }
 
-const isProjectUrlReachable = (targetUrl: string): Promise<boolean> => {
+const isProjectUrlReachable = (targetUrl: string, timeoutMs = URL_REACHABILITY_TIMEOUT_MS): Promise<boolean> => {
   return new Promise((resolve) => {
     let settled = false
 
@@ -656,7 +663,7 @@ const isProjectUrlReachable = (targetUrl: string): Promise<boolean> => {
         url,
         {
           method: 'GET',
-          timeout: URL_REACHABILITY_TIMEOUT_MS
+          timeout: timeoutMs
         },
         (response) => {
           response.resume()
@@ -674,6 +681,26 @@ const isProjectUrlReachable = (targetUrl: string): Promise<boolean> => {
       settle(false)
     }
   })
+}
+
+const delay = (milliseconds: number): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds)
+  })
+}
+
+const openExternalUrl = async (targetUrl: string): Promise<DesktopActionResult> => {
+  try {
+    const url = new URL(targetUrl)
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return { ok: false, message: 'Only http and https URLs can be opened.' }
+    }
+
+    await shell.openExternal(url.toString())
+    return { ok: true, message: 'URL opened.' }
+  } catch {
+    return { ok: false, message: 'Invalid URL.' }
+  }
 }
 
 const escapePowerShellSingleQuoted = (value: string): string => value.replace(/'/g, "''")
@@ -1192,9 +1219,9 @@ const inspectProjectOutput = (project: Project, running: RunningProject, output:
   const successSignal = findSignal(successSignals, output)
   if (successSignal && !running.successDetected) {
     running.successDetected = true
-    if (!running.fatalDetected) setProjectStatus(project.id, 'Running')
+    if (!running.fatalDetected && !running.waitingForUrl) setProjectStatus(project.id, 'Running')
     appendProjectLog(project.id, 'info', `success signal detected: ${successSignal}`)
-    appendProjectLog(project.id, 'info', 'process running')
+    appendProjectLog(project.id, 'info', running.waitingForUrl ? 'waiting for development URL' : 'process running')
   }
 }
 
@@ -1204,18 +1231,76 @@ const resolveTaskProfile = (project: Project, taskProfileId?: string): ProjectTa
   return project.taskProfiles.find((profile) => profile.id === taskProfileId) ?? null
 }
 
+const isDevelopmentTaskProfile = (taskProfile: ProjectTaskProfile): boolean => {
+  return (
+    taskProfile.id === DEFAULT_TASK_PROFILE_ID ||
+    taskProfile.name.trim().toLowerCase() === DEFAULT_TASK_PROFILE_NAME.toLowerCase()
+  )
+}
+
+const waitForDevelopmentUrlAndOpen = async (project: Project, running: RunningProject): Promise<DesktopActionResult> => {
+  const targetUrl = project.url.trim()
+  const deadline = Date.now() + DEV_SERVER_START_TIMEOUT_MS
+
+  appendProjectLog(project.id, 'info', `waiting for ${targetUrl}`)
+
+  while (Date.now() < deadline) {
+    if (running.completed || running.stopping) {
+      return { ok: false, message: `${project.name} stopped before the development URL responded.` }
+    }
+
+    const reachable = await isProjectUrlReachable(targetUrl, DEV_SERVER_POLL_REQUEST_TIMEOUT_MS)
+    if (reachable) {
+      const openResult = running.browserOpened ? { ok: true, message: 'URL already opened.' } : await openExternalUrl(targetUrl)
+      running.browserOpened = true
+
+      if (!openResult.ok) {
+        running.waitingForUrl = false
+        appendProjectLog(project.id, 'error', openResult.message ?? 'Could not open URL.')
+        setProjectStatus(project.id, 'Error')
+        return openResult
+      }
+
+      running.waitingForUrl = false
+      setProjectStatus(project.id, 'Running')
+      appendProjectLog(project.id, 'info', 'development URL reachable')
+      appendProjectLog(project.id, 'info', 'browser opened')
+      return { ok: true, message: `${project.name} is running. Browser opened.` }
+    }
+
+    await delay(Math.min(DEV_SERVER_POLL_INTERVAL_MS, Math.max(0, deadline - Date.now())))
+  }
+
+  const message = `Timed out after ${Math.round(DEV_SERVER_START_TIMEOUT_MS / 1000)}s waiting for ${targetUrl}.`
+  running.waitingForUrl = false
+  appendProjectLog(project.id, 'error', message)
+  setProjectStatus(project.id, 'Error')
+  return { ok: false, message }
+}
+
 const startProjectRun = async (projectId: string, taskProfileId?: string): Promise<DesktopActionResult> => {
   const project = findSavedProject(projectId)
   if (!project) return failProjectRun(projectId, 'Saved project was not found.')
   const taskProfile = resolveTaskProfile(project, taskProfileId)
   if (!taskProfile) return failProjectRun(project.id, 'Task profile was not found.')
+  const shouldWaitForDevelopmentUrl = isDevelopmentTaskProfile(taskProfile) && Boolean(project.url.trim())
 
   if (runningProjects.has(project.id)) {
     if (await isProjectUrlReachable(project.url)) {
-      return markProjectAlreadyReachable(project, runningProjects.get(project.id))
+      const running = runningProjects.get(project.id)
+
+      if (shouldWaitForDevelopmentUrl && running && !running.browserOpened) {
+        const openResult = await openExternalUrl(project.url)
+        running.browserOpened = true
+
+        if (!openResult.ok) return failProjectRun(project.id, openResult.message ?? 'Could not open URL.')
+        appendProjectLog(project.id, 'info', 'browser opened')
+      }
+
+      return markProjectAlreadyReachable(project, running)
     }
 
-    setProjectStatus(project.id, 'Running')
+    setProjectStatus(project.id, shouldWaitForDevelopmentUrl ? 'Starting' : 'Running')
     return { ok: true, message: 'This project already seems to be running.' }
   }
 
@@ -1228,12 +1313,20 @@ const startProjectRun = async (projectId: string, taskProfileId?: string): Promi
   }
 
   if (await isProjectUrlReachable(project.url)) {
+    if (shouldWaitForDevelopmentUrl) {
+      const openResult = await openExternalUrl(project.url)
+      if (!openResult.ok) return failProjectRun(project.id, openResult.message ?? 'Could not open URL.')
+      appendProjectLog(project.id, 'info', 'browser opened')
+      markProjectAlreadyReachable(project)
+      return { ok: true, message: 'This project already seems to be running. Browser opened.' }
+    }
+
     return markProjectAlreadyReachable(project)
   }
 
   appendProjectLog(project.id, 'info', `task started: ${taskProfile.name}`)
   appendProjectLog(project.id, 'info', `command started: ${taskProfile.command}`)
-  setProjectStatus(project.id, 'Running')
+  setProjectStatus(project.id, shouldWaitForDevelopmentUrl ? 'Starting' : 'Running')
 
   try {
     const child = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-Command', taskProfile.command], {
@@ -1244,15 +1337,17 @@ const startProjectRun = async (projectId: string, taskProfileId?: string): Promi
     const running: RunningProject = {
       child,
       alreadyReachable: false,
+      browserOpened: false,
       completed: false,
       fatalDetected: false,
       startedAt: Date.now(),
       stopping: false,
-      successDetected: false
+      successDetected: false,
+      waitingForUrl: shouldWaitForDevelopmentUrl
     }
 
     runningProjects.set(project.id, running)
-    appendProjectLog(project.id, 'info', 'process running')
+    appendProjectLog(project.id, 'info', shouldWaitForDevelopmentUrl ? 'process starting' : 'process running')
 
     child.stdout.on('data', (chunk: Buffer) => {
       const output = chunk.toString('utf8')
@@ -1323,6 +1418,10 @@ const startProjectRun = async (projectId: string, taskProfileId?: string): Promi
       setProjectStatus(project.id, 'Stopped')
       appendProjectLog(project.id, 'info', `process stopped: ${exitSummary}`)
     })
+
+    if (shouldWaitForDevelopmentUrl) {
+      return waitForDevelopmentUrlAndOpen(project, running)
+    }
 
     return { ok: true, message: `${project.name}: ${taskProfile.name} started.` }
   } catch (error) {
@@ -1400,17 +1499,7 @@ ipcMain.handle('desktop:open-folder', async (_event, targetPath: string): Promis
 })
 
 ipcMain.handle('desktop:open-url', async (_event, targetUrl: string): Promise<DesktopActionResult> => {
-  try {
-    const url = new URL(targetUrl)
-    if (!['http:', 'https:'].includes(url.protocol)) {
-      return { ok: false, message: 'Only http and https URLs can be opened.' }
-    }
-
-    await shell.openExternal(url.toString())
-    return { ok: true, message: 'URL opened.' }
-  } catch {
-    return { ok: false, message: 'Invalid URL.' }
-  }
+  return openExternalUrl(targetUrl)
 })
 
 ipcMain.handle('desktop:open-powershell', (_event, targetPath: string): DesktopActionResult => {

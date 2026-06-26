@@ -1017,6 +1017,12 @@ h1 {
   color: #cbd5e1;
 }
 
+.status-starting {
+  border-color: rgba(96, 165, 250, 0.38);
+  background: rgba(30, 64, 175, 0.24);
+  color: #bfdbfe;
+}
+
 .status-running {
   border-color: rgba(34, 197, 94, 0.36);
   background: rgba(22, 101, 52, 0.22);
@@ -3712,6 +3718,12 @@ html[data-theme='light'] .status-stopped {
   border-color: #c9d1dc;
   background: #f3f5f8;
   color: #374151;
+}
+
+html[data-theme='light'] .status-starting {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 html[data-theme='light'] .status-running,
